@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>YugiGrid</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+
+<body>
+  <div class="wrap">
+
+    <!-- ===== TOP BAR ===== -->
+    <div class="topbar">
+      <div class="brand">
+        <h1>YugiGrid</h1>
+  
+
+      <div class="topbar-right">
+        <div class="seedBox">
+          <label for="seed" class="lbl">Seed</label>
+          <input
+            id="seed"
+            type="text"
+            inputmode="numeric"
+            placeholder="YYYYMMDD or custom seed"
+          />
+        </div>
+
+        <div class="statPills">
+          <div class="pill">
+            <div class="pillLabel">Mistakes</div>
+            <div class="pillValue" id="mistakes">0</div>
+          </div>
+          <div class="pill">
+            <div class="pillLabel">Time</div>
+            <div class="pillValue" id="time">00:00</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== STATUS + DAY BADGE ===== -->
+    <div class="statusRow">
+      <div id="status" class="status"></div>
+      <div
+        id="dayBadge"
+        class="dayBadge"
+        title="Click to see how day rules work"
+      >
+        —
+      </div>
+    </div>
+
+    <!-- ===== MATRIX LAYOUT ===== -->
+    <div class="matrixWrap">
+      <div class="corner"></div>
+
+      <!-- Column rules (top) -->
+      <div id="colRules" class="colRules" aria-label="Column rules"></div>
+
+      <!-- Row rules (left) -->
+      <div id="rowRules" class="rowRules" aria-label="Row rules"></div>
+
+      <!-- Game board -->
+      <div id="board" class="board" aria-label="YugiMatrix board"></div>
+    </div>
+
+    <!-- ===== ACTIONS ===== -->
+    <div class="actions">
+      <button id="resetBtn" class="btn secondary">Reset</button>
+      <button id="submitBtn" class="btn primary">Submit</button>
+    </div>
+
+    <!-- version marker -->
+    <div style="opacity:.45; text-align:center; font-size:11px; margin-top:14px;">
+      UI v1.0 – Matrix layout
+    </div>
+
+  </div>
+
+  <!-- ===== CARD PICKER MODAL ===== -->
+  <div id="modalBack" class="modalBack" style="display:none;">
+    <div
+      class="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modalTitle"
+    >
+      <div class="modalHead">
+        <div class="modalTitle" id="modalTitle">Choose a card</div>
+        <button
+          id="closeBtn"
+          class="iconBtn"
+          aria-label="Close picker"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div class="modalBody">
+        <input
+          id="search"
+          class="search"
+          type="text"
+          placeholder="Type to search…"
+          autocomplete="off"
+        />
+        <div id="list" class="list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== RESULTS MODAL ===== -->
+  <div id="resultBack" class="modalBack" style="display:none;">
+    <div
+      class="modal wide"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="resultTitle"
+    >
+      <div class="modalHead">
+        <div class="modalTitle" id="resultTitle">
+          📊 Community picks
+        </div>
+        <button
+          id="resultCloseBtn"
+          class="iconBtn"
+          aria-label="Close results"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div class="modalBody">
+        <div id="resultList" class="resultList"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./app.ts"></script>
+</body>
+</html>
