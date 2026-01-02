@@ -20,7 +20,6 @@ export default async (req) => {
   const key = `picks/daily/${seed}.json`;
 
   const existing = await store.get(key, { type: "json", consistency: "strong" });
-  const data = existing ?? { total: 0, cells: {} };
-
+  const data = existing?.data ?? { cells: {} };
   return json(data);
 };
