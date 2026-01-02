@@ -10,7 +10,7 @@ import {
   pickNonCollidingAsync,
   type Card,
   type Rule,
-} from "./engine.ts";
+} from "./engine";
 
 /* =========================
    IndexedDB cache (large)
