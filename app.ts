@@ -232,37 +232,49 @@ let modalBack: HTMLElement | null,
 let modalBound = false;
 
 function bindModal(): boolean {
-  if (modalBound) return true;
-
+  // mindig friss DOM query (ne cache-eljen nullt)
   modalBack = $("modalBack");
   listEl = $("list");
   searchEl = $("search") as HTMLInputElement | null;
   closeBtn = $("closeBtn");
 
-  const rc = $("resultCloseBtn");
+  const rc = $("resultCloseBtn") as HTMLButtonElement | null;
   const rb = $("resultBack");
-  if (rc) (rc as HTMLButtonElement).onclick = closeResults;
-  if (rb) rb.onclick = (e) => {
-    const t = e.target as HTMLElement | null;
-    if (t && t.id === "resultBack") closeResults();
-  };
+
+  if (rc) rc.onclick = closeResults;
+  if (rb) {
+    rb.onclick = (e) => {
+      const t = e.target as HTMLElement | null;
+      if (t && t.id === "resultBack") closeResults();
+    };
+  }
 
   if (!modalBack || !listEl || !searchEl || !closeBtn) {
-    console.error("Modal DOM missing:", { modalBack, listEl, searchEl, closeBtn });
+    console.error("❌ Modal DOM missing:", {
+      modalBack: !!modalBack,
+      listEl: !!listEl,
+      searchEl: !!searchEl,
+      closeBtn: !!closeBtn,
+    });
     return false;
   }
 
-  closeBtn.onclick = closePicker;
-  modalBack.onclick = (e) => {
-    const t = e.target as HTMLElement | null;
-    if (t && t.id === "modalBack") closePicker();
-  };
+  // csak egyszer bindeljük az eseményeket
+  if (!modalBound) {
+    (closeBtn as HTMLButtonElement).onclick = closePicker;
 
-  searchEl.addEventListener("input", () => {
-    renderList(searchEl?.value ?? "");
-  });
+    modalBack.onclick = (e) => {
+      const t = e.target as HTMLElement | null;
+      if (t && t.id === "modalBack") closePicker();
+    };
 
-  modalBound = true;
+    searchEl.addEventListener("input", () => {
+      renderList(searchEl?.value ?? "");
+    });
+
+    modalBound = true;
+  }
+
   return true;
 }
 
@@ -312,13 +324,35 @@ function closePicker(): void {
 function renderList(q: string): void {
   if (!listEl) return;
 
+  const MAX_SHOW = 50;
+
   const needle = String(q || "").trim().toLowerCase();
-  const list = needle ? ACTIVE_CARDS.filter((c) => c.name.toLowerCase().includes(needle)) : ACTIVE_CARDS;
+
+  let list = needle
+    ? ACTIVE_CARDS.filter((c) => c.name.toLowerCase().includes(needle))
+    : ACTIVE_CARDS;
+
+  // ✅ ha nincs keresés, ne renderelj ezreket
+  const limited = !needle && list.length > MAX_SHOW;
+  if (limited) list = list.slice(0, MAX_SHOW);
 
   listEl.innerHTML = "";
 
+  // ✅ kis infó, ha limitált
+  if (limited) {
+    const info = document.createElement("div");
+    info.style.opacity = ".7";
+    info.style.padding = "12px";
+    info.textContent = `Showing first ${MAX_SHOW}. Type to search…`;
+    listEl.appendChild(info);
+  }
+
   if (!list.length) {
-    listEl.innerHTML = `<div style="opacity:.7; padding:12px;">No matches.</div>`;
+    const empty = document.createElement("div");
+    empty.style.opacity = ".7";
+    empty.style.padding = "12px";
+    empty.textContent = "No matches.";
+    listEl.appendChild(empty);
     return;
   }
 
@@ -342,7 +376,7 @@ function renderList(q: string): void {
       </div>
     `;
 
-    (item.querySelector("button") as HTMLButtonElement | null)!.onclick = () => pickCard(card);
+    (item.querySelector("button") as HTMLButtonElement).onclick = () => pickCard(card);
     listEl.appendChild(item);
   }
 }

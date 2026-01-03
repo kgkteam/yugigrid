@@ -33,7 +33,6 @@
       <div class="pillLabel">Time</div>
       <div class="pillValue" id="time">00:00</div>
     </div>
-    
 <a
     class="pill paypalPill"
     id="paypalDonate"
@@ -69,39 +68,26 @@
     </div>
   </div>
 
-  <!-- ===== CARD PICKER MODAL ===== -->
-  <div id="modalBack" class="modalBack" style="display:none;">
-    <div
-      class="modal"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="modalTitle"
-    >
-      <div class="modalHead">
-        <div class="modalTitle" id="modalTitle">Choose a card</div>
-        <button
-          id="closeBtn"
-          class="iconBtn"
-          aria-label="Close picker"
-        >
-          ✕
-        </button>
-      </div>
+<!-- ===== CARD PICKER MODAL ===== -->
+<div id="modalBack" class="modalBack" style="display:none;">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modalHead">
+      <div class="modalTitle" id="modalTitle">Choose a card</div>
+      <button id="closeBtn" class="iconBtn" aria-label="Close picker">✕</button>
+    </div>
 
-      <div class="modalBody">
-        <input
-          id="seed"
-          type="text"
-          inputmode="numeric"
-          placeholder="Daily seed"
-          disabled
-/>
-
-        />
-        <div id="list" class="list"></div>
-      </div>
+    <div class="modalBody">
+      <input
+        id="search"
+        class="search"
+        type="text"
+        placeholder="Type to search…"
+        autocomplete="off"
+      />
+      <div id="list" class="list"></div>
     </div>
   </div>
+</div>
 
   <!-- ===== RESULTS MODAL ===== -->
   <div id="resultBack" class="modalBack" style="display:none;">
