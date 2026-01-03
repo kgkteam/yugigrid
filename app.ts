@@ -134,7 +134,6 @@ function setStatus(msg: string): void {
         `Tip: You can force a seed with ?seed=YYYYMMDD`
     );
   };
-}
 
 /* =========================
    URL seed helper
