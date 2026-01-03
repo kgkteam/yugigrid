@@ -64,10 +64,10 @@ body::before{
 }
 
 .wrap{
-  max-width: 1040px;
-  margin: 0 auto;
-  padding: 24px 24px 32px;
+  display: grid;
+  justify-items: center;
 }
+
 
 /* ===== TOPBAR ===== */
 .topbar{
@@ -402,12 +402,12 @@ body::before{
 /* ===== ACTIONS ===== */
 
 .actions{
-  width: fit-content;        /* a táblázat szélességéhez igazodik */
-  margin: 24px auto 0;       /* középre teszi */
   display: flex;
   justify-content: center;
   gap: 12px;
+  margin-top: 24px;
 }
+
 
 
 .btn{
@@ -735,24 +735,3 @@ button:disabled,
 @media (max-width: 560px){
   .resultList{ grid-template-columns: 1fr; }
 }
-
-/* ==== ACTIONS: CENTER UNDER TABLE (NO PUSH RIGHT) ==== */
-.actions{
-  display: flex !important;
-  justify-content: center !important;
-  align-items: center !important;
-  gap: 12px !important;
-
-  /* flex szülőben ez a tuti középre húzás */
-  align-self: center !important;
-  margin: 24px auto 0 !important;
-
-  /* ne legyenek a korábbi trükkök */
-  position: static !important;
-  left: auto !important;
-  transform: none !important;
-
-  width: fit-content !important;
-}
-
-
