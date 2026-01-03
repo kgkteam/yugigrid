@@ -85,15 +85,7 @@ export function mulberry32(a: number): RNG {
   };
 }
 
-export function dateSeed(): SeedObj {
-  const params = new URLSearchParams(location.search);
-  const forced = params.get("seed");
-  if (forced) {
-    const n = Number(forced);
-    const s = String(forced);
-    return { s, n: Number.isFinite(n) ? n : 123456 };
-  }
-
+  export function dateSeed(): SeedObj {
   const d = new Date();
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
@@ -106,23 +98,27 @@ export function dateSeed(): SeedObj {
    DAY TYPE (single source of truth)
    ========================= */
 
-/* =========================
-   DAY TYPE (single source of truth)
-   ========================= */
-
 export type DayType = "Monster" | "Spell/Trap";
 
 /**
- * 20% eséllyel Spell/Trap, különben Monster.
- * Determinisztikus: ugyanarra a seedre mindig ugyanaz.
+ * Egyetlen közös forrás arra, hogy Monster nap van-e vagy Spell/Trap nap.
+ * Alap: a dateSeed().s (YYYYMMDD), tehát "a rendszer napja".
+ *
+ * Szabály (könnyen átírható):
+ * - páros DD = Spell/Trap
+ * - páratlan DD = Monster
  */
 export function getSystemDayType(): DayType {
-  const { n } = dateSeed();
+  const { s, n } = dateSeed();
 
-  // ugyanaz a RNG, amit máshol is használsz
-  const rand = mulberry32((Number.isFinite(n) ? n : 123456) >>> 0);
+  // Ha YYYYMMDD, akkor a nap számából döntünk
+  if (/^\d{8}$/.test(s)) {
+    const dd = Number(s.slice(6, 8));
+    return (dd % 2 === 0) ? "Spell/Trap" : "Monster";
+  }
 
-  return rand() < 0.20 ? "Spell/Trap" : "Monster";
+  // Custom seed fallback: parity a számon
+  return (Number.isFinite(n) && n % 2 === 0) ? "Spell/Trap" : "Monster";
 }
 
 export function isSpellTrapDay(): boolean {

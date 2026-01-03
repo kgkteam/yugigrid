@@ -133,16 +133,6 @@ function setStatus(msg: string): void {
 }
 
 /* =========================
-   URL seed helper
-   ========================= */
-
-function setUrlSeed(seedStr: string): void {
-  const v = String(seedStr ?? "").trim();
-  const url = v ? `?seed=${encodeURIComponent(v)}` : "";
-  history.replaceState(null, "", url);
-}
-
-/* =========================
    Images (CDN)
    ========================= */
 
@@ -709,15 +699,11 @@ function normalizeCard(raw: YgoApiCard): Card {
   };
 }
 
-/* =========================
-   UI wiring
-   ========================= */
-
 function bindButtons(): void {
   const reset = $("resetBtn") as HTMLButtonElement | null;
   const submit = $("submitBtn") as HTMLButtonElement | null;
 
-  if (reset)
+  if (reset) {
     reset.onclick = () => {
       for (let r = 0; r < 3; r++) {
         for (let c = 0; c < 3; c++) {
@@ -731,8 +717,9 @@ function bindButtons(): void {
       tick();
       setStatus("Reset.");
     };
+  }
 
-  if (submit)
+  if (submit) {
     submit.onclick = async () => {
       for (let r = 0; r < 3; r++) {
         for (let c = 0; c < 3; c++) {
@@ -741,9 +728,12 @@ function bindButtons(): void {
           wrong[r][c] = !ok;
         }
       }
+
       renderBoard(currentSeedStr);
 
-      const allOk = grid.flat().every(Boolean) && wrong.flat().every((v) => v === false);
+      const allOk =
+        grid.flat().every(Boolean) &&
+        wrong.flat().every((v) => v === false);
 
       if (!allOk) {
         setStatus("❌ Some cells are invalid (or empty).");
@@ -754,17 +744,9 @@ function bindButtons(): void {
       setStatus("✅ All cells are valid! (Saved to global community stats)");
       await openResults(currentSeedStr);
     };
-
-  const seedEl = $("seed") as HTMLInputElement | null;
-  if (seedEl) {
-    seedEl.addEventListener("keydown", (e) => {
-      if ((e as KeyboardEvent).key === "Enter") {
-        const v = String(seedEl.value || "").trim();
-        if (v) location.search = `?seed=${encodeURIComponent(v)}`;
-      }
-    });
   }
 }
+
 
 /* =========================
    INIT
@@ -775,7 +757,6 @@ async function init(): Promise<void> {
   const seedStr = seedObj.s;
 
   currentSeedStr = seedStr;
-  setUrlSeed(seedStr);
 
   bindButtons();
 
