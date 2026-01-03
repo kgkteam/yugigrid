@@ -11,7 +11,6 @@ const json = (obj, status = 200) =>
 
 function isPreconditionFail(err) {
   const msg = String(err?.message || err || "");
-  // Netlify/undici/fetch hibák változhatnak, ez a lazy-safe check
   return (
     msg.includes("onlyIfMatch") ||
     msg.includes("onlyIfNew") ||
@@ -51,8 +50,8 @@ export default async (req) => {
       total: (prevCell.total || 0) + 1,
       cards: { ...(prevCell.cards || {}) },
     };
-    nextCell.cards[cardKey] = (nextCell.cards[cardKey] || 0) + 1;
 
+    nextCell.cards[cardKey] = (nextCell.cards[cardKey] || 0) + 1;
     next.cells[cell] = nextCell;
 
     try {
@@ -61,19 +60,28 @@ export default async (req) => {
       } else {
         await store.setJSON(key, next, { onlyIfNew: true });
       }
-      // ha idáig eljutunk, akkor sikerült az írás
-      return json({ ok: true });
+
+      // ✅ HARD VERIFY: read back immediately
+      const verify = await store.getWithMetadata(key, {
+        type: "json",
+        consistency: "strong",
+      });
+
+      return json({
+        ok: true,
+        key,
+        etag: verify?.etag ?? null,
+        data: verify?.data ?? null,
+      });
     } catch (err) {
-      // ha ütközés/precondition fail → újrapróbáljuk
       if (isPreconditionFail(err)) continue;
 
-      // egyéb hiba → logolhatóbb válasz
       return json(
-        { error: "write_failed", message: String(err?.message || err) },
+        { error: "write_failed", message: String(err?.message || err), key },
         500
       );
     }
   }
 
-  return json({ error: "conflict" }, 409);
+  return json({ error: "conflict", key }, 409);
 };
