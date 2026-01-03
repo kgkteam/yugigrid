@@ -227,12 +227,9 @@ body::before{
 
 /* ===== MATRIX LAYOUT ===== */
 .matrixWrap{
-  display:grid;
-  grid-template-columns: var(--sideW) 1fr;
-  grid-template-rows: auto 1fr;
-  gap: var(--sideGap);
-  align-items:start;
-  margin-top: 8px;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .corner{
@@ -679,22 +676,18 @@ button:disabled,
   font-weight: 800;
 }
 
-/* ===== RESPONSIVE ===== */
-@media (max-width: 980px){
-  .topbar{ justify-content:center; }
-  .topbar-right{ justify-content:center; }
-  .statusRow{ justify-content:center; }
-}
-
 @media (max-width: 900px){
   .wrap{ padding: 16px; }
 
   .matrixWrap{
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto;
+    width: 100%;              /* NEW: mobilon ne legyen fit-content */
+    margin-left: 0;           /* NEW: reset */
+    margin-right: 0;          /* NEW: reset */
   }
 
-  .corner{ display:none; }
+  .corner{ display: none; }
 
   .colRules{
     grid-column: 1;
@@ -723,7 +716,12 @@ button:disabled,
     min-height: 110px;
   }
 
-  .actions{ justify-content:center; }
+  /* NEW: mobilon a fixed gombok középre alul */
+  .actions{
+    left: 50%;
+    transform: translateX(-50%);
+    justify-content: center;
+  }
 
   .resultList{ grid-template-columns: repeat(2, 1fr); }
 }
