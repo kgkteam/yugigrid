@@ -10,35 +10,36 @@
 <body>
   <div class="wrap">
 
-    <!-- ===== TOP BAR ===== -->
-    <div class="topbar">
-      <div class="brand">
-        <h1>YugiGrid</h1>
-  
+  <!-- ===== TOP BAR ===== -->
+  <div class="topbar">
+    <div class="brand">
+      <h1>YugiGrid</h1>
+      <p class="sub">Daily Yu-Gi-Oh! matrix challenge</p>
+    </div>
 
-      <div class="topbar-right">
-        <div class="seedBox">
-          <label for="seed" class="lbl">Seed</label>
-          <input
-            id="seed"
-            type="text"
-            inputmode="numeric"
-            placeholder="YYYYMMDD or custom seed"
-          />
+    <div class="topbar-right">
+      <div class="seedBox">
+        <label for="seed" class="lbl">Seed</label>
+        <input
+          id="seed"
+          type="text"
+          inputmode="numeric"
+          placeholder="YYYYMMDD or custom seed"
+        />
+      </div>
+
+      <div class="statPills">
+        <div class="pill">
+          <div class="pillLabel">Mistakes</div>
+          <div class="pillValue" id="mistakes">0</div>
         </div>
-
-        <div class="statPills">
-          <div class="pill">
-            <div class="pillLabel">Mistakes</div>
-            <div class="pillValue" id="mistakes">0</div>
-          </div>
-          <div class="pill">
-            <div class="pillLabel">Time</div>
-            <div class="pillValue" id="time">00:00</div>
-          </div>
+        <div class="pill">
+          <div class="pillLabel">Time</div>
+          <div class="pillValue" id="time">00:00</div>
         </div>
       </div>
     </div>
+  </div>
 
     <!-- ===== MATRIX LAYOUT ===== -->
     <div class="matrixWrap">
