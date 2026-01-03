@@ -29,7 +29,7 @@
   --sideGap: 12px;
   --cellGap: 10px;
 
-  --cellH: 138px; /* one place to tweak height */
+  --cellH: 160px; /* one place to tweak height */
 }
 
 *{ box-sizing:border-box; }
@@ -738,4 +738,17 @@ button:disabled,
   .resultList{ grid-template-columns: 1fr; }
 }
 
+:root{
+  --cellW: 230px; /* állítható: 210-260 környéke */
+}
+
+/* top column rules */
+.colRules{
+  grid-template-columns: repeat(3, var(--cellW));
+}
+
+/* board cells */
+.board{
+  grid-template-columns: repeat(3, var(--cellW));
+}
 
