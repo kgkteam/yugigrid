@@ -400,19 +400,6 @@ body::before{
   cursor: default;
 }
 
-.cell.locked:hover{
-  transform: none;
-  filter: none;
-  box-shadow: var(--shadowSoft);
-  border-color: rgba(255,255,255,.14);
-}
-
-/* submit után a % badge se animáljon */
-.cell.locked:hover .usageBadge{
-  transform: none;
-  box-shadow: 0 10px 28px rgba(0,0,0,.35);
-}
-
 
 /* opcionális: low/hot ha használsz data-tier-t */
 .usageBadge[data-tier="low"]{
@@ -672,18 +659,28 @@ button:disabled,
 }
 .list::-webkit-scrollbar-thumb:hover{ background: rgba(255,255,255,.22); }
 
-/* ===== RESULTS (vissza a régi listásra) ===== */
+/* ===== RESULTS (modal grid, nem lóg ki) ===== */
+.modalBody{
+  padding: 12px;
+  overflow: auto;                 /* ✅ ha magas, scrollozzon */
+  max-height: calc(85vh - 64px);  /* head ~52px + padding */
+}
+
 .resultList{
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
+
+  /* ✅ nem erőltetjük a 3 oszlopot: ha nincs hely, lemegy 2/1-re */
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
 
 .resultCell{
+  min-width: 0;                   /* ✅ grid overflow fix */
   border: 1px solid rgba(255,255,255,.12);
   border-radius: var(--r14);
   padding: 10px;
   background: rgba(255,255,255,.04);
+  overflow: hidden;               /* ✅ semmi se lóghat ki a cellából */
 }
 
 .resultCell .cellTitle{
@@ -698,29 +695,41 @@ button:disabled,
   align-items:center;
   gap:10px;
   margin-bottom: 10px;
+  width: 100%;
+  min-width: 0;                   /* ✅ flex shrink engedély */
 }
 .resultRow:last-child{ margin-bottom: 0; }
 
 .resultThumb{
   width: 40px;
-  height: auto;
+  height: 56px;                   /* ✅ fix magasság */
+  object-fit: cover;
   border-radius: 8px;
   border: 1px solid rgba(255,255,255,.12);
   flex: 0 0 auto;
+}
+
+.resTxt{
+  min-width: 0;                   /* ✅ ellipsis működjön */
+  flex: 1 1 auto;
 }
 
 .resultRow .nm{
   font-size: 12px;
   font-weight: 900;
   line-height: 1.2;
+
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 220px;
+
+  max-width: none;                /* ✅ ne fix 220px */
 }
 
 .pctBadge{
-  margin-left: auto;
+  flex: 0 0 auto;                 /* ✅ ne nyomja szét a sort */
+  margin-left: 10px;
+
   font-size: 11px;
   font-weight: 950;
   padding: 4px 10px;
