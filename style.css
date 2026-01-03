@@ -785,16 +785,9 @@ button:disabled,
   flex-wrap:wrap;
 }
 
-/* opcionális: kicsit hangsúlyosabb Day pill */
-.dayPill{
-  border-color: rgba(124,92,255,.28);
-  box-shadow: 0 14px 45px rgba(124,92,255,.14);
-}
-
 .paypalPill{
   text-decoration: none;
   color: var(--fg);
-  cursor: pointer;
 }
 
 .paypalPill:hover{
