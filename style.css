@@ -679,36 +679,52 @@ button:disabled,
 @media (max-width: 900px){
   .wrap{ padding: 16px; }
 
+  /* a matrix teljes szélesség, középre nem kell játszani mobilon */
   .matrixWrap{
+    width: 100%;
+    margin: 0;
+    display: grid;
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto;
-    width: 100%;              /* NEW: mobilon ne legyen fit-content */
-    margin-left: 0;           /* NEW: reset */
-    margin-right: 0;          /* NEW: reset */
+    gap: var(--sideGap);
+    align-items: start;
   }
 
   .corner{ display: none; }
 
+  /* TOP rules: maradjon 3 oszlop */
   .colRules{
     grid-column: 1;
     grid-row: 1;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--cellGap);
   }
 
+  /* LEFT rules: mobilon legyen 3 oszlop (ne 3 sor óriáskártya) */
   .rowRules{
     grid-column: 1;
     grid-row: 2;
-    grid-template-rows: none;
+    width: 100%;
+    display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: none;
+    gap: var(--cellGap);
   }
   .rowRules .rule{
     height: auto;
     min-height: 84px;
   }
 
+  /* BOARD: 3 oszlop */
   .board{
     grid-column: 1;
     grid-row: 3;
-    grid-template-columns: repeat(3, minmax(0,1fr));
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--cellGap);
   }
 
   .cell{
@@ -716,7 +732,7 @@ button:disabled,
     min-height: 110px;
   }
 
-  /* NEW: mobilon a fixed gombok középre alul */
+  /* gombok középre alul */
   .actions{
     left: 50%;
     transform: translateX(-50%);
@@ -725,6 +741,7 @@ button:disabled,
 
   .resultList{ grid-template-columns: repeat(2, 1fr); }
 }
+
 
 @media (max-width: 560px){
   .resultList{ grid-template-columns: 1fr; }
