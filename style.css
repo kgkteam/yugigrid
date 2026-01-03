@@ -400,12 +400,15 @@ body::before{
 }
 
 /* ===== ACTIONS ===== */
+
 .actions{
-  margin: 24px auto 0;
+  width: fit-content;        /* a táblázat szélességéhez igazodik */
+  margin: 24px auto 0;       /* középre teszi */
   display: flex;
   justify-content: center;
   gap: 12px;
 }
+
 
 .btn{
   border:0;
