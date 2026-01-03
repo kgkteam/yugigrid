@@ -6,13 +6,24 @@ const store = getStore("yugigrid");
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), {
     status,
-    headers: { "content-type": "application/json; charset=utf-8" }
+    headers: { "content-type": "application/json; charset=utf-8" },
   });
 
+function isPreconditionFail(err) {
+  const msg = String(err?.message || err || "");
+  // Netlify/undici/fetch hibák változhatnak, ez a lazy-safe check
+  return (
+    msg.includes("onlyIfMatch") ||
+    msg.includes("onlyIfNew") ||
+    msg.includes("Precondition") ||
+    msg.includes("412") ||
+    msg.includes("condition") ||
+    msg.includes("etag")
+  );
+}
+
 export default async (req) => {
-  if (req.method !== "POST") {
-    return json({ error: "method not allowed" }, 405);
-  }
+  if (req.method !== "POST") return json({ error: "method not allowed" }, 405);
 
   const body = await req.json().catch(() => null);
   const { seed, cell, cardId } = body || {};
@@ -24,10 +35,10 @@ export default async (req) => {
   const cardKey = String(cardId);
   const key = `picks/daily/${seed}.json`;
 
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 10; i++) {
     const existing = await store.getWithMetadata(key, {
       type: "json",
-      consistency: "strong"
+      consistency: "strong",
     });
 
     const etag = existing?.etag;
@@ -38,19 +49,30 @@ export default async (req) => {
     const prevCell = next.cells[cell] || { total: 0, cards: {} };
     const nextCell = {
       total: (prevCell.total || 0) + 1,
-      cards: { ...(prevCell.cards || {}) }
+      cards: { ...(prevCell.cards || {}) },
     };
-
     nextCell.cards[cardKey] = (nextCell.cards[cardKey] || 0) + 1;
+
     next.cells[cell] = nextCell;
 
-    const writeOpts = etag ? { onlyIfMatch: etag } : { onlyIfNew: true };
+    try {
+      if (etag) {
+        await store.setJSON(key, next, { onlyIfMatch: etag });
+      } else {
+        await store.setJSON(key, next, { onlyIfNew: true });
+      }
+      // ha idáig eljutunk, akkor sikerült az írás
+      return json({ ok: true });
+    } catch (err) {
+      // ha ütközés/precondition fail → újrapróbáljuk
+      if (isPreconditionFail(err)) continue;
 
-    // IMPORTANT: set() -> string, biztosabban kompatibilis
-    const res = await store.set(key, JSON.stringify(next), writeOpts);
-
-    // res elvileg { modified, etag }, de ha mégsem, legalább nem crashelünk
-    if (res?.modified) return json({ ok: true });
+      // egyéb hiba → logolhatóbb válasz
+      return json(
+        { error: "write_failed", message: String(err?.message || err) },
+        500
+      );
+    }
   }
 
   return json({ error: "conflict" }, 409);
