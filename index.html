@@ -11,41 +11,41 @@
 <body>
   <div class="wrap">
 
-<!-- ===== TOP BAR ===== -->
-<div class="topbar">
-  <div class="brand">
-    <h1>YugiGrid</h1>
-    <p class="sub">Daily Yu-Gi-Oh! matrix challenge</p>
-  </div>
+    <!-- ===== TOP BAR ===== -->
+    <div class="topbar">
+      <div class="brand">
+        <h1>YugiGrid</h1>
+        <p class="sub">Daily Yu-Gi-Oh! matrix challenge</p>
+      </div>
 
-  <div class="topbar-right">
-    <div class="pill dayPill">
-      <div class="pillLabel" id="dayLabel">Day</div>
-      <div class="pillValue" id="dayType">Monster</div>
+      <div class="topbar-right">
+        <div class="pill dayPill">
+          <div class="pillLabel" id="dayLabel">Day</div>
+          <div class="pillValue" id="dayType">Monster</div>
+        </div>
+
+        <div class="pill">
+          <div class="pillLabel">Mistakes</div>
+          <div class="pillValue" id="mistakes">0</div>
+        </div>
+
+        <div class="pill">
+          <div class="pillLabel">Time</div>
+          <div class="pillValue" id="time">00:00</div>
+        </div>
+
+        <a
+          class="pill paypalPill"
+          id="paypalDonate"
+          href="https://www.paypal.com/donate/?hosted_button_id=K8Y25ASFUM5V8"
+          target="_blank"
+          rel="noopener"
+        >
+          <div class="pillLabel">Support</div>
+          <div class="pillValue">Donate</div>
+        </a>
+      </div>
     </div>
-
-    <div class="pill">
-      <div class="pillLabel">Mistakes</div>
-      <div class="pillValue" id="mistakes">0</div>
-    </div>
-
-    <div class="pill">
-      <div class="pillLabel">Time</div>
-      <div class="pillValue" id="time">00:00</div>
-    </div>
-<a
-    class="pill paypalPill"
-    id="paypalDonate"
-    href="https://www.paypal.com/donate/?hosted_button_id=K8Y25ASFUM5V8"
-    target="_blank"
-    rel="noopener"
-  >
-    <div class="pillLabel">Support</div>
-    <div class="pillValue">Donate</div>
-  </a>
-
-  </div>
-</div>
 
     <!-- ===== MATRIX LAYOUT ===== -->
     <div class="matrixWrap">
@@ -66,28 +66,29 @@
       <button id="resetBtn" class="btn secondary">Reset</button>
       <button id="submitBtn" class="btn primary">Submit</button>
     </div>
+
   </div>
 
-<!-- ===== CARD PICKER MODAL ===== -->
-<div id="modalBack" class="modalBack" style="display:none;">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-    <div class="modalHead">
-      <div class="modalTitle" id="modalTitle">Choose a card</div>
-      <button id="closeBtn" class="iconBtn" aria-label="Close picker">✕</button>
-    </div>
+  <!-- ===== CARD PICKER MODAL ===== -->
+  <div id="modalBack" class="modalBack" style="display:none;">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modalHead">
+        <div class="modalTitle" id="modalTitle">Choose a card</div>
+        <button id="closeBtn" class="iconBtn" aria-label="Close picker">✕</button>
+      </div>
 
-    <div class="modalBody">
-      <input
-        id="search"
-        class="search"
-        type="text"
-        placeholder="Type to search…"
-        autocomplete="off"
-      />
-      <div id="list" class="list"></div>
+      <div class="modalBody">
+        <input
+          id="search"
+          class="search"
+          type="text"
+          placeholder="Type to search…"
+          autocomplete="off"
+        />
+        <div id="list" class="list"></div>
+      </div>
     </div>
   </div>
-</div>
 
   <!-- ===== RESULTS MODAL ===== -->
   <div id="resultBack" class="modalBack" style="display:none;">
@@ -98,9 +99,7 @@
       aria-labelledby="resultTitle"
     >
       <div class="modalHead">
-        <div class="modalTitle" id="resultTitle">
-          📊 Community picks
-        </div>
+        <div class="modalTitle" id="resultTitle">📊 Picks</div>
         <button
           id="resultCloseBtn"
           class="iconBtn"
@@ -111,7 +110,8 @@
       </div>
 
       <div class="modalBody">
-        <div id="resultList" class="resultList"></div>
+        <!-- wrapper: erre fogjuk rárakni a % badge-es layoutot -->
+        <div id="resultList" class="resultList" data-variant="picks"></div>
       </div>
     </div>
   </div>

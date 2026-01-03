@@ -198,6 +198,7 @@ body::before{
   color: var(--muted);
   font-weight: 800;
 }
+
 /* ===== RULE CARDS ===== */
 .rule{
   background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.055));
@@ -231,9 +232,8 @@ body::before{
   grid-template-rows: auto auto;
   gap: var(--sideGap);
 
-  /* EZ A KULCS */
   width: fit-content;
-  margin: 40px auto 0; /* középre */
+  margin: 40px auto 0;
 }
 
 .corner{
@@ -312,7 +312,6 @@ body::before{
   align-items: center;
   justify-content: center;
   gap: 8px;
-
 }
 
 .cell::before{
@@ -349,30 +348,19 @@ body::before{
   font-weight: 950;
   font-size: 14px;
   line-height: 1.2;
-  margin-bottom: 6px;
+  margin-bottom: 0;
   text-shadow: 0 10px 40px rgba(0,0,0,.40);
 
-  /* ✅ új */
   text-align: center;
   word-break: break-word;
   overflow-wrap: anywhere;
 }
-
-
 
 .meta{
   color: var(--muted);
   font-size: 12px;
   line-height: 1.35;
 }
-
-.cell-info{
-  font-size:12px;
-  text-align:center;
-  opacity:.95;
-  margin-top: 8px;
-}
-.cell-info.bad{ color: var(--bad); }
 
 .cell-center{
   height: 100%;
@@ -387,6 +375,83 @@ body::before{
   bottom: 8px;
   font-size: 12px;
   opacity: .75;
+}
+
+/* ===== BOARD picked card wrapper ===== */
+.cardimg{
+  width: 70px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex: 0 0 auto;
+}
+
+.cellCard{
+  position: relative;
+  width: 100%;
+  height: 100%;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* ===== SMART % BADGE (board + results) ===== */
+.usageBadge{
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: .2px;
+
+  padding: 4px 10px;
+  border-radius: 999px;
+
+  background: rgba(0,0,0,.62);
+  border: 1px solid rgba(255,255,255,.14);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  box-shadow: 0 10px 28px rgba(0,0,0,.35);
+  color: rgba(200,200,255,.95);
+
+  pointer-events: none;
+
+  transition:
+    transform .18s var(--ease),
+    box-shadow .18s var(--ease),
+    opacity .18s var(--ease),
+    filter .18s var(--ease);
+}
+
+/* hover: subtle flash */
+.cell:hover .usageBadge,
+.resultCard:hover .usageBadge{
+  transform: scale(1.06);
+  box-shadow:
+    0 0 0 1px rgba(124,92,255,.35),
+    0 0 26px rgba(124,92,255,.45),
+    0 0 70px rgba(124,92,255,.30);
+}
+
+/* low (0-10%) */
+.usageBadge[data-tier="low"]{
+  opacity: .45;
+  filter: grayscale(.25);
+}
+
+/* hot (90%+) */
+.usageBadge[data-tier="hot"]{
+  box-shadow:
+    0 0 0 1px rgba(124,92,255,.35),
+    0 0 22px rgba(124,92,255,.45),
+    0 0 60px rgba(124,92,255,.35);
+  filter: brightness(1.15);
 }
 
 /* ===== SHAKE ===== */
@@ -407,8 +472,6 @@ body::before{
 }
 
 /* ===== ACTIONS ===== */
-
-/* Make actions align to matrix width */
 .actions{
   width: fit-content;
   margin: 24px auto 0;
@@ -416,8 +479,6 @@ body::before{
   justify-content:center;
   gap:12px;
 }
-
-
 
 .btn{
   border:0;
@@ -565,16 +626,8 @@ button:disabled,
 }
 
 .thumb{
-  width: 28px;   
-  height: 40px;  
-  object-fit: cover;
-  border-radius: 8px;
-  flex: 0 0 auto;
-}
-
-.cardimg{
-  width: 70px;   /* eddig 44 volt */
-  height: 100px;  /* eddig 64 volt */
+  width: 28px;
+  height: 40px;
   object-fit: cover;
   border-radius: 8px;
   flex: 0 0 auto;
@@ -652,41 +705,70 @@ button:disabled,
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
 }
+
 .resultCell{
   border: 1px solid rgba(255,255,255,.12);
   border-radius: var(--r14);
   padding: 10px;
   background: rgba(255,255,255,.04);
 }
+
 .resultCell .cellTitle{
   font-size: 12px;
   font-weight: 900;
   color: var(--muted);
   margin-bottom: 8px;
 }
+
 .resultRow{
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 .resultRow:last-child{ margin-bottom: 0; }
-.resultRow img{
-  width: 40px;
+
+.resultCard{
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+
+  padding: 12px;
+  border-radius: var(--r14);
+
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.10);
+
+  box-shadow: 0 12px 35px rgba(0,0,0,.20);
+  transition: transform .14s var(--ease), border-color .14s var(--ease), background .14s var(--ease);
+}
+
+.resultCard:hover{
+  transform: translateY(-1px);
+  border-color: rgba(124,92,255,.35);
+  background: rgba(255,255,255,.05);
+}
+
+.resultImg{
+  width: 90px;
   height: auto;
   border-radius: 8px;
   border: 1px solid rgba(255,255,255,.12);
 }
-.resultRow .nm{
+
+.resultName{
   font-size: 12px;
-  font-weight: 900;
+  font-weight: 950;
   line-height: 1.2;
+  text-align: center;
+
+  max-width: 220px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 220px;
+  padding: 0 10px;
 }
-.resultRow .pct{
+
+.resultMeta{
   font-size: 11px;
   color: var(--muted);
   font-weight: 800;
@@ -737,7 +819,6 @@ button:disabled,
   }
 
   .actions{ justify-content:center; }
-
   .resultList{ grid-template-columns: repeat(2, 1fr); }
 }
 
@@ -749,15 +830,8 @@ button:disabled,
   --cellW: 230px; /* állítható: 210-260 környéke */
 }
 
-/* top column rules */
-.colRules{
-  grid-template-columns: repeat(3, var(--cellW));
-}
-
-/* board cells */
-.board{
-  grid-template-columns: repeat(3, var(--cellW));
-}
+.colRules{ grid-template-columns: repeat(3, var(--cellW)); }
+.board{ grid-template-columns: repeat(3, var(--cellW)); }
 
 /* ===== TOPBAR: centered title + centered stats row ===== */
 .topbar{
@@ -807,4 +881,3 @@ button:disabled,
   color: #ffd86b;
   text-shadow: 0 0 12px rgba(245,197,66,.45);
 }
-

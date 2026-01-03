@@ -198,15 +198,24 @@ function renderBoard(seedStr: string): void {
         const small = cardImageUrlById(card.id);
         const pct = cellPickPct[r][c];
 
+        const tier =
+          pct == null ? "" : pct >= 90 ? "hot" : pct <= 10 ? "low" : "mid";
+
         cell.innerHTML = `
-          <img class="cardimg" 
+          <div class="cellCard">
+            ${
+              pct != null
+                ? `<div class="usageBadge" data-tier="${tier}">${pct}%</div>`
+                : ""
+            }
+            <img class="cardimg"
               src="${escapeHtml(small)}"
               alt="${escapeHtml(card.name)}"
               loading="lazy"
               decoding="async"
               onerror="this.onerror=null; this.src='${escapeHtml(small)}';">
-          <div class="name">${escapeHtml(card.name)}</div>
-          ${pct != null ? `<div class="cell-info">Community: ${pct}%</div>` : ""}
+            <div class="name">${escapeHtml(card.name)}</div>
+          </div>
         `;
       } else {
         cell.innerHTML = `
@@ -226,6 +235,7 @@ function renderBoard(seedStr: string): void {
     }
   }
 }
+
 
 /* =========================
    MODAL
@@ -570,24 +580,29 @@ async function openResults(seedStr: string): Promise<void> {
         empty.textContent = "No data yet.";
         cell.appendChild(empty);
       } else {
-        for (const p of picks) {
-          const id = String(p.cardId);
-          const count = Number(p.cnt ?? 0);
-          const pct = Math.round((count / cellTotal) * 1000) / 10;
+      for (const p of picks) {
+      const id = String(p.cardId);
+      const count = Number(p.cnt ?? 0);
+      const pct = Math.round((count / cellTotal) * 1000) / 10;
 
-          const card = CARD_BY_ID.get(id);
+      const tier = pct >= 90 ? "hot" : pct <= 10 ? "low" : "mid";
 
-          const row = document.createElement("div");
-          row.className = "resultRow";
-          row.innerHTML = `
-            <img src="${escapeHtml(cardImageUrlById(id))}" alt="">
-            <div style="min-width:0;">
-              <div class="nm">${escapeHtml(card?.name || id)}</div>
-              <div class="pct">${pct}% • ${count}/${cellTotal}</div>
-            </div>
-          `;
-          cell.appendChild(row);
-        }
+      const card = CARD_BY_ID.get(id);
+
+      const row = document.createElement("div");
+      row.className = "resultRow";
+      row.innerHTML = `
+        <div class="resultCard">
+          <div class="usageBadge" data-tier="${tier}">${pct}%</div>
+          <img class="resultImg" src="${escapeHtml(cardImageUrlById(id))}" alt="">
+          <div class="resultName">${escapeHtml(card?.name || id)}</div>
+          <div class="resultMeta">${count}/${cellTotal}</div>
+        </div>
+      `;
+
+  cell.appendChild(row);
+}
+
       }
 
       out.appendChild(cell);
