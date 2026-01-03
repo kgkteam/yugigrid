@@ -790,3 +790,13 @@ button:disabled,
   border-color: rgba(124,92,255,.28);
   box-shadow: 0 14px 45px rgba(124,92,255,.14);
 }
+
+.paypalPill{
+  text-decoration: none;
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.paypalPill:hover{
+  border-color: rgba(35,209,139,.35);
+}
