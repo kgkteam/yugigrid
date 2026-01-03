@@ -445,24 +445,31 @@ async function pickCard(card: Card): Promise<void> {
    ========================= */
 
 async function recordSubmit(seedStr: string): Promise<void> {
-  // fire-and-forget per cell
+  const jobs: Promise<any>[] = [];
+
   for (let r = 0; r < 3; r++) {
     for (let c = 0; c < 3; c++) {
       const card = grid[r][c];
       if (!card) continue;
 
-      fetch("/.netlify/functions/stats", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          seed: seedStr,
-          cell: `${r},${c}`,   // egyezzen a backend kulccsal
-          cardId: Number(card.id), // ✅ number, nem string
-        }),
-      }).catch(() => {});
+      jobs.push(
+        fetch("/.netlify/functions/stats", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            seed: seedStr,
+            cell: `${r},${c}`,
+            cardId: Number(card.id),
+          }),
+        })
+      );
     }
   }
+
+  // ne dobjon hibát, ha 1 request elhasal
+  await Promise.allSettled(jobs);
 }
+
 
 type GlobalStats = {
   seed: string;
