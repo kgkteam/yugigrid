@@ -844,8 +844,12 @@ function bindButtons(): void {
       await recordSubmit(currentSeedStr);
 
       // ✅ Submit után cellánként frissítjük a community %-okat és kiírjuk a táblára
-      await refreshCellPickPct(currentSeedStr);
-      renderBoard(currentSeedStr);
+      setStatus("✅ All cells are valid! (Saved to global community stats)");
+      await openResults(currentSeedStr);
+
+      // opcionális: ha akarod a cellákon is a %-ot, akkor majd a results bezárás után frissítjük,
+      // vagy az openResults-ből visszaadott statból számoljuk (az már a next step).
+
 
       setStatus("✅ All cells are valid! (Saved to global community stats)");
       await openResults(currentSeedStr);

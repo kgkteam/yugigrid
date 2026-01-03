@@ -85,13 +85,13 @@ export function mulberry32(a: number): RNG {
   };
 }
 
-  export function dateSeed(): SeedObj {
-  const d = new Date();
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  const s = `${yyyy}${mm}${dd}`;
-  return { s, n: Number(s) };
+export function dateSeed(): SeedObj {
+const d = new Date();
+const yyyy = d.getFullYear();
+const mm = String(d.getMonth() + 1).padStart(2, "0");
+const dd = String(d.getDate()).padStart(2, "0");
+const s = `${yyyy}${mm}${dd}`;
+return { s, n: Number(s) };
 }
 
 /* =========================
@@ -147,29 +147,31 @@ function isSpellOrTrap(card: Card | null | undefined): boolean {
   return card?.type === "Spell Card" || card?.type === "Trap Card";
 }
 
-function unifiedLevel(card: Card | null | undefined): number | null {
-  const v = (card?.level ?? card?.rank ?? card?.linkRating ?? null) as unknown;
-  return typeof v === "number" ? v : null;
-}
-
 export function matches(card: Card, rule: Rule): boolean {
   if (!rule) return false;
 
   let v: unknown;
 
   switch (rule.key) {
+    // ✅ FIX: Level rule csak LEVEL-t néz (nem rank, nem link)
     case "level":
-      v = unifiedLevel(card);
+      v = card?.level;
       break;
+
+    // ✅ Rank rule csak RANK-t néz
     case "rank":
       v = card?.rank;
       break;
+
+    // ✅ Link rule csak LINKRATING-et néz
     case "linkRating":
       v = card?.linkRating;
       break;
+
     case "monsterType":
       v = card?.monsterType;
       break;
+
     case "type":
       v = card?.type;
       break;
@@ -189,7 +191,6 @@ export function matches(card: Card, rule: Rule): boolean {
   const value = rule.value;
   const value2 = rule.value2;
 
-  // ===== OPERATORS =====
   if (op === "eq") return v === value;
   if (op === "neq") return v !== value;
 
