@@ -286,6 +286,7 @@ function bindModal(): boolean {
 }
 
 function openPicker(seedStr: string, r: number, c: number): void {
+  if (hasSubmitted) return;
   if (!bindModal()) return;
 
   activeCell = { r, c };
@@ -824,6 +825,7 @@ function bindButtons(): void {
         return;
       }
 
+      // ✅ validáció
       for (let r = 0; r < 3; r++) {
         for (let c = 0; c < 3; c++) {
           const card = grid[r][c];
@@ -841,24 +843,30 @@ function bindButtons(): void {
         return;
       }
 
-      await recordSubmit(currentSeedStr);
-
-      // ✅ Submit után cellánként frissítjük a community %-okat és kiírjuk a táblára
-      setStatus("✅ All cells are valid! (Saved to global community stats)");
-      await openResults(currentSeedStr);
-
-      // opcionális: ha akarod a cellákon is a %-ot, akkor majd a results bezárás után frissítjük,
-      // vagy az openResults-ből visszaadott statból számoljuk (az már a next step).
-
-
-      setStatus("✅ All cells are valid! (Saved to global community stats)");
-      await openResults(currentSeedStr);
-
+      // ✅ UI lock azonnal (nehogy double-click submitoljon)
       hasSubmitted = true;
       updateSubmitUI();
+
+      // ✅ Results azonnal – ez még a korábbi community adatokat mutatja
+      setStatus("✅ Showing community results (your pick will appear after refresh)");
+      openResults(currentSeedStr); // <-- NINCS await, ne blokkoljon
+
+      // ✅ Mentés háttérben (nem blokkolja az UI-t / results-t)
+      recordSubmit(currentSeedStr)
+        .then(async () => {
+          // opcionális: a cellákon a "Community: %" frissítése, ha kell
+          await refreshCellPickPct(currentSeedStr);
+          renderBoard(currentSeedStr);
+          setStatus("✅ Saved!");
+        })
+        .catch((e) => {
+          console.error(e);
+          setStatus("⚠️ Save failed (try later).");
+        });
     };
   }
 }
+
 
 /* =========================
    INIT
