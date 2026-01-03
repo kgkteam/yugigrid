@@ -850,19 +850,6 @@ init().catch((e) => {
   alert("Error during init. Check the console.");
 });
 
-function setupPayPal(): void {
-  const a = document.getElementById("paypalDonate") as HTMLAnchorElement | null;
-  if (!a) return;
-
-  // 1) PayPal.me (legkönnyebb)
-  a.href = "https://www.paypal.me/TEPAYPALMENEVED"; // <-- ide a sajátod
-
-  // opcionális: előre kitöltött összeg pl. 3 EUR:
-  // a.href = "https://www.paypal.me/TEPAYPALMENEVED/3";
-}
-
-setupPayPal();
-
 // ---- DEBUG ONLY ----
 declare global {
   interface Window {
