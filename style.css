@@ -67,13 +67,7 @@ body::before{
   max-width: 1040px;
   margin: 0 auto;
   padding: 24px 24px 32px;
-
-  /* NEW: legyen teljes magasság + rugalmas elrendezés */
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
 }
-
 
 /* ===== TOPBAR ===== */
 .topbar{
@@ -189,45 +183,20 @@ body::before{
   font-weight: 950;
 }
 
+/* ===== STATUS + DAY BADGE ===== */
+.statusRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  margin: 8px 0 14px;
+}
+
 .status{
   min-height: 20px;
   color: var(--muted);
   font-weight: 800;
-}
-
-.dayBadge{
-  display:inline-flex;
-  align-items:center;
-  gap:10px;
-  padding:8px 12px;
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.06);
-  color: var(--fg);
-  cursor:pointer;
-  user-select:none;
-  font-weight:950;
-
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-
-  box-shadow: 0 10px 35px rgba(0,0,0,.25);
-  transition: transform .14s var(--ease), border-color .14s var(--ease), filter .14s var(--ease);
-}
-.dayBadge:hover{
-  transform: translateY(-1px);
-  border-color: rgba(124,92,255,.45);
-  filter: brightness(1.03);
-}
-.dayBadge .dot{
-  width:10px; height:10px;
-  border-radius:999px;
-  background: rgba(255,255,255,.55);
-}
-.dayBadge .sub{
-  font-weight:900;
-  opacity:.72;
-  font-size: 12px;
 }
 
 /* ===== RULE CARDS ===== */
@@ -263,13 +232,8 @@ body::before{
   grid-template-rows: auto 1fr;
   gap: var(--sideGap);
   align-items:start;
-
-  /* NEW: középre vízszintesen + függőlegesen a maradék helyen */
-  margin-top: auto;
-  margin-bottom: auto;
-  align-self: center;
+  margin-top: 8px;
 }
-
 
 .corner{
   grid-column: 1;
@@ -436,17 +400,11 @@ body::before{
 
 /* ===== ACTIONS ===== */
 .actions{
-  position: fixed;
-  bottom: 20px;
-  left: 20px;
-
   display:flex;
   gap:10px;
+  margin-top: 16px;
   justify-content:flex-start;
-
-  z-index: 50;
 }
-
 
 .btn{
   border:0;
@@ -765,11 +723,7 @@ button:disabled,
     min-height: 110px;
   }
 
-  .actions{
-  left: 50%;
-  transform: translateX(-50%);
-  justify-content: center;
-}
+  .actions{ justify-content:center; }
 
   .resultList{ grid-template-columns: repeat(2, 1fr); }
 }
