@@ -126,15 +126,6 @@ function setStatus(msg: string): void {
   if (el) el.textContent = msg || "";
 }
 
-  badge.onclick = () => {
-    alert(
-      `${label}\n\n` +
-        `You should pick ${isSpellTrap ? "Spell/Trap cards" : "Monsters"} only.\n` +
-        `Rules are generated from the corresponding pool.\n\n` +
-        `Tip: You can force a seed with ?seed=YYYYMMDD`
-    );
-  };
-
 /* =========================
    URL seed helper
    ========================= */
@@ -796,7 +787,7 @@ async function init(): Promise<void> {
 
   // stable per seed
   const isSpellTrap = rand() < 0.2;
-  setDayBadge(isSpellTrap);
+
 
   // choose correct pool
   const pool = isSpellTrap ? pools.spellTrapPool : pools.monsterPool;
