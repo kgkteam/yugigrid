@@ -736,20 +736,23 @@ button:disabled,
   .resultList{ grid-template-columns: 1fr; }
 }
 
-/* ==== FORCE CENTER ACTIONS (even inside flex parents) ==== */
+/* ==== ACTIONS: CENTER UNDER TABLE (NO PUSH RIGHT) ==== */
 .actions{
   display: flex !important;
   justify-content: center !important;
   align-items: center !important;
   gap: 12px !important;
 
-  /* ez a lényeg: kiszakítja a "jobbra tolós" flex logikából */
-  width: fit-content !important;
+  /* flex szülőben ez a tuti középre húzás */
+  align-self: center !important;
   margin: 24px auto 0 !important;
 
-  /* ha a szülő flex és "end"-re tolja: ez akkor is középre húzza */
-  position: relative;
-  left: 50%;
-  transform: translateX(-50%);
+  /* ne legyenek a korábbi trükkök */
+  position: static !important;
+  left: auto !important;
+  transform: none !important;
+
+  width: fit-content !important;
 }
+
 
