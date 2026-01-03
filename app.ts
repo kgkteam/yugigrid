@@ -102,15 +102,17 @@ let activeCell: { r: number; c: number } | null = null;
 const MIN_SOLUTIONS_PER_CELL = 20;
 let cellSolutionCounts: CellCounts = Array.from({ length: 3 }, () => Array(3).fill(0));
 
+// ✅ NEW: cellánként a TE lerakott lapod community %-a (Submit után töltjük)
+let cellPickPct: (number | null)[][] = Array.from({ length: 3 }, () => Array(3).fill(null));
+
 /* =========================
    DOM helpers
    ========================= */
 
-   function renderDayType(isSpellTrap: boolean): void {
+function renderDayType(isSpellTrap: boolean): void {
   const el = $("dayType");
   if (el) el.textContent = isSpellTrap ? "Spell/Trap" : "Monster";
 }
-
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T | null =>
   document.getElementById(id) as T | null;
@@ -191,16 +193,18 @@ function renderBoard(seedStr: string): void {
 
       if (card) {
         const small = cardImageUrlById(card.id);
+        const pct = cellPickPct[r][c];
 
         cell.innerHTML = `
-        <img class="cardimg" 
-            src="${escapeHtml(small)}"
-            alt="${escapeHtml(card.name)}"
-            loading="lazy"
-            decoding="async"
-            onerror="this.onerror=null; this.src='${escapeHtml(small)}';">
-        <div class="name">${escapeHtml(card.name)}</div>
-      `;
+          <img class="cardimg" 
+              src="${escapeHtml(small)}"
+              alt="${escapeHtml(card.name)}"
+              loading="lazy"
+              decoding="async"
+              onerror="this.onerror=null; this.src='${escapeHtml(small)}';">
+          <div class="name">${escapeHtml(card.name)}</div>
+          ${pct != null ? `<div class="cell-info">Community: ${pct}%</div>` : ""}
+        `;
       } else {
         cell.innerHTML = `
           <div class="cell-center">
@@ -305,6 +309,7 @@ function openPicker(seedStr: string, r: number, c: number): void {
     // matchesCell(card, rowRule, colRule);
   });
 
+  // NOTE: sort itt maradhat, de picit drága. Ha még gyorsítanál, init-ben egyszer rendezd a CARDS-ot.
   ACTIVE_CARDS.sort((a, b) => a.name.localeCompare(b.name));
 
   const titleEl = $("modalTitle");
@@ -427,6 +432,9 @@ async function pickCard(card: Card): Promise<void> {
   wrong[r][c] = false;
   grid[r][c] = card;
 
+  // ✅ ha új pick volt, a régi %-okat érdemes törölni (különben félrevezető lehet)
+  cellPickPct[r][c] = null;
+
   closePicker();
   renderBoard(currentSeedStr);
   tick();
@@ -448,22 +456,21 @@ async function recordSubmit(seedStr: string): Promise<void> {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           seed: seedStr,
-          cell: `${r},${c}`,
-          cardId: String(card.id),
+          cell: `${r},${c}`,   // egyezzen a backend kulccsal
+          cardId: Number(card.id), // ✅ number, nem string
         }),
       }).catch(() => {});
     }
   }
 }
 
-type CellStats = {
-  total: number;
-  cards: Record<string, number>;
+type GlobalStats = {
+  seed: string;
+  totals: Record<string, number>;
+  top3: Record<string, { cardId: number; cnt: number }[]>;
 };
 
-type GlobalStats = {
-  cells: Record<string, CellStats>;
-};
+
 
 async function fetchGlobalStats(seedStr: string): Promise<GlobalStats> {
   const res = await fetch(`/.netlify/functions/picks?seed=${encodeURIComponent(seedStr)}`, {
@@ -472,6 +479,43 @@ async function fetchGlobalStats(seedStr: string): Promise<GlobalStats> {
   if (!res.ok) throw new Error("picks fetch failed");
   return (await res.json()) as GlobalStats;
 }
+
+// ✅ NEW: Submit után cellánként kiszámoljuk a TE pickjeid %-át
+async function refreshCellPickPct(seedStr: string): Promise<void> {
+  // 3x3 grid – null = nincs adat
+  cellPickPct = Array.from({ length: 3 }, () => Array(3).fill(null));
+
+  let st: GlobalStats;
+  try {
+    st = await fetchGlobalStats(seedStr);
+  } catch {
+    return;
+  }
+
+  const totalsByCell = st?.totals || {};
+  const top3ByCell = st?.top3 || {};
+
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      const card = grid[r][c];
+      if (!card) continue;
+
+      // FIGYELEM: ez egyezzen a backenddel ("0,0" vagy "r0c0")
+      const k = `${r},${c}`;
+
+      const total = Number(totalsByCell[k] ?? 0);
+      if (!total) continue;
+
+      const arr = top3ByCell[k] || [];
+      const hit = arr.find(x => Number(x.cardId) === Number(card.id));
+      const count = hit ? Number(hit.cnt ?? 0) : 0;
+
+      const pct = Math.round((count / total) * 1000) / 10; // 1 tizedes
+      cellPickPct[r][c] = pct;
+    }
+  }
+}
+
 
 async function openResults(seedStr: string): Promise<void> {
   const back = $("resultBack");
@@ -490,13 +534,16 @@ async function openResults(seedStr: string): Promise<void> {
     return;
   }
 
-  const cells = st?.cells || {};
+  const totalsByCell = st?.totals || {};
+  const top3ByCell = st?.top3 || {};
 
   out.innerHTML = "";
 
   for (let r = 0; r < 3; r++) {
     for (let c = 0; c < 3; c++) {
+      // FIGYELEM: egyezzen a backend cell kulcsával ("0,0" vagy "r0c0")
       const k = `${r},${c}`;
+
       const cell = document.createElement("div");
       cell.className = "resultCell";
 
@@ -505,24 +552,21 @@ async function openResults(seedStr: string): Promise<void> {
       title.textContent = `Cell ${r + 1},${c + 1}`;
       cell.appendChild(title);
 
-      // ÚJ: cellánkénti stat
-      const cellStats = cells[k]; // CellStats | undefined
-      const cellTotal = Number(cellStats?.total ?? 0);
-      const picks = cellStats?.cards ?? {};
+      const cellTotal = Number(totalsByCell[k] ?? 0);
+      const picks = top3ByCell[k] || []; // [{cardId,cnt}, ...]
 
-      const entries = Object.entries(picks)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3);
-
-      if (!entries.length || !cellTotal) {
+      if (!picks.length || !cellTotal) {
         const empty = document.createElement("div");
         empty.style.opacity = ".7";
         empty.textContent = "No data yet.";
         cell.appendChild(empty);
       } else {
-        for (const [id, count] of entries) {
+        for (const p of picks) {
+          const id = String(p.cardId);
+          const count = Number(p.cnt ?? 0);
           const pct = Math.round((count / cellTotal) * 1000) / 10;
-          const card = CARD_BY_ID.get(String(id));
+
+          const card = CARD_BY_ID.get(id);
 
           const row = document.createElement("div");
           row.className = "resultRow";
@@ -541,6 +585,7 @@ async function openResults(seedStr: string): Promise<void> {
     }
   }
 }
+
 
 function closeResults(): void {
   const back = $("resultBack");
@@ -631,9 +676,6 @@ function normalizeCard(raw: YgoApiCard): Card {
   const isTrap = type === "Trap Card";
   const isMonster = !isSpell && !isTrap;
 
-  // Strict, API-based:
-  // - Normal Monster => raw.type === "Normal Monster"
-  // - Effect Monster => any monster that is not Normal Monster
   const isNormalMonster = isMonster && type === "Normal Monster";
   const isEffectMonster = isMonster && !isNormalMonster;
 
@@ -716,8 +758,6 @@ function normalizeCard(raw: YgoApiCard): Card {
     pendulum: isPendulum,
     tuner: isTuner,
 
-    // ✅ these 2 fix rules.json (Non-Effect / Normal)
-    // For spells/traps keep null so monster-only rules don't match them.
     effect: isMonster ? isEffectMonster : null,
     normal: isMonster ? isNormalMonster : null,
 
@@ -733,6 +773,10 @@ function normalizeCard(raw: YgoApiCard): Card {
   };
 }
 
+/* =========================
+   UI wiring
+   ========================= */
+
 function bindButtons(): void {
   const reset = $("resetBtn") as HTMLButtonElement | null;
   const submit = $("submitBtn") as HTMLButtonElement | null;
@@ -743,6 +787,7 @@ function bindButtons(): void {
         for (let c = 0; c < 3; c++) {
           grid[r][c] = null;
           wrong[r][c] = false;
+          cellPickPct[r][c] = null;
         }
       }
       mistakes = 0;
@@ -765,9 +810,7 @@ function bindButtons(): void {
 
       renderBoard(currentSeedStr);
 
-      const allOk =
-        grid.flat().every(Boolean) &&
-        wrong.flat().every((v) => v === false);
+      const allOk = grid.flat().every(Boolean) && wrong.flat().every((v) => v === false);
 
       if (!allOk) {
         setStatus("❌ Some cells are invalid (or empty).");
@@ -775,12 +818,16 @@ function bindButtons(): void {
       }
 
       await recordSubmit(currentSeedStr);
+
+      // ✅ NEW: Submit után cellánként frissítjük a community %-okat és kiírjuk a táblára
+      await refreshCellPickPct(currentSeedStr);
+      renderBoard(currentSeedStr);
+
       setStatus("✅ All cells are valid! (Saved to global community stats)");
       await openResults(currentSeedStr);
     };
   }
 }
-
 
 /* =========================
    INIT
@@ -828,9 +875,7 @@ async function init(): Promise<void> {
     return card.kind === "monster";
   });
 
-  let picked:
-    | { rows: Rule[]; cols: Rule[]; cellCounts: number[][] }
-    | null = null;
+  let picked: { rows: Rule[]; cols: Rule[]; cellCounts: number[][] } | null = null;
 
   try {
     const res = await pickNonCollidingAsync({
