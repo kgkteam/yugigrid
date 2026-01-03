@@ -751,8 +751,9 @@ function bindButtons(): void {
 /* =========================
    INIT
    ========================= */
+
 async function init(): Promise<void> {
-  // ✅ törli a query-t és hash-t, de NEM redirectel
+  // ✅ törli a query-t és hash-t (pl. ?seed=, #asd), de nem töri el az appot
   if (location.search || location.hash) {
     history.replaceState(null, "", location.pathname);
   }
@@ -763,8 +764,6 @@ async function init(): Promise<void> {
   currentSeedStr = seedStr;
 
   bindButtons();
-  // ... minden más változatlan
-}
 
   RULE_POOL = await loadRules();
 
@@ -778,24 +777,26 @@ async function init(): Promise<void> {
   const pools = buildRulePools(RULE_POOL);
   const rand = mulberry32(base);
 
-  // stable per seed
+  // stable per seed (20% Spell/Trap day)
   const isSpellTrap = rand() < 0.2;
 
   renderDayType(isSpellTrap);
 
-  // choose correct pool
+  // choose correct rule pool
   const pool = isSpellTrap ? pools.spellTrapPool : pools.monsterPool;
 
-  // ✅ store day type so picker can filter properly
+  // store day type so picker can filter properly
   DAY_IS_SPELLTRAP = isSpellTrap;
 
-  // ✅ IMPORTANT: generator needs the card universe to count solutions
+  // IMPORTANT: generator needs the correct card universe
   const generationCards = CARDS.filter((card) => {
     if (isSpellTrap) return card.kind !== "monster";
     return card.kind === "monster";
   });
 
-  let picked: { rows: Rule[]; cols: Rule[]; cellCounts: number[][] } | null = null;
+  let picked:
+    | { rows: Rule[]; cols: Rule[]; cellCounts: number[][] }
+    | null = null;
 
   try {
     const res = await pickNonCollidingAsync({
@@ -837,7 +838,10 @@ init().catch((e) => {
   alert("Error during init. Check the console.");
 });
 
-// ---- DEBUG ONLY ----
+/* =========================
+   DEBUG ONLY
+   ========================= */
+
 declare global {
   interface Window {
     __YG_DEBUG__?: unknown;
@@ -865,7 +869,7 @@ window.__YG_DEBUG__ = {
 
 setInterval(tick, 250);
 
-// handy: clear cards cache from console: __YG_CLEAR_CACHE__()
+// handy: clear cards cache from console
 window.__YG_CLEAR_CACHE__ = clearCardsCache;
 
 export {};
