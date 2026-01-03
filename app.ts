@@ -126,18 +126,6 @@ function setStatus(msg: string): void {
   if (el) el.textContent = msg || "";
 }
 
-function setDayBadge(isSpellTrap: boolean): void {
-  const badge = $("dayBadge");
-  if (!badge) return;
-
-  const label = isSpellTrap ? "Spell & Trap Day" : "Monster Day";
-
-  badge.innerHTML = `
-    <span class="dot"></span>
-    <span>${label}</span>
-    <span class="sub">• click</span>
-  `;
-
   badge.onclick = () => {
     alert(
       `${label}\n\n` +
