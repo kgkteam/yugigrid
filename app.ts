@@ -751,14 +751,20 @@ function bindButtons(): void {
 /* =========================
    INIT
    ========================= */
-
 async function init(): Promise<void> {
+  // ✅ törli a query-t és hash-t, de NEM redirectel
+  if (location.search || location.hash) {
+    history.replaceState(null, "", location.pathname);
+  }
+
   const seedObj = dateSeed();
   const seedStr = seedObj.s;
 
   currentSeedStr = seedStr;
 
   bindButtons();
+  // ... minden más változatlan
+}
 
   RULE_POOL = await loadRules();
 
