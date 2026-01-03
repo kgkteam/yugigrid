@@ -105,6 +105,9 @@ let cellSolutionCounts: CellCounts = Array.from({ length: 3 }, () => Array(3).fi
 // ✅ NEW: cellánként a TE lerakott lapod community %-a (Submit után töltjük)
 let cellPickPct: (number | null)[][] = Array.from({ length: 3 }, () => Array(3).fill(null));
 
+// ✅ NEW: Submit → View results mód
+let hasSubmitted = false;
+
 /* =========================
    DOM helpers
    ========================= */
@@ -290,7 +293,7 @@ function openPicker(seedStr: string, r: number, c: number): void {
   const rowRule = rowRules[r];
   const colRule = colRules[c];
 
-    // ✅ used = minden lerakott kártya, KIVÉVE ami ebben a cellában van (hogy lehessen cserélni)
+  // ✅ used = minden lerakott kártya, KIVÉVE ami ebben a cellában van (hogy lehessen cserélni)
   const used = new Set(grid.flat().filter(Boolean).map((x) => String((x as Card).id)));
   const current = grid[r][c];
   if (current) used.delete(String(current.id));
@@ -472,14 +475,11 @@ async function recordSubmit(seedStr: string): Promise<void> {
   await Promise.allSettled(jobs);
 }
 
-
 type GlobalStats = {
   seed: string;
   totals: Record<string, number>;
   top3: Record<string, { cardId: number; cnt: number }[]>;
 };
-
-
 
 async function fetchGlobalStats(seedStr: string): Promise<GlobalStats> {
   const res = await fetch(`/.netlify/functions/picks?seed=${encodeURIComponent(seedStr)}`, {
@@ -516,7 +516,7 @@ async function refreshCellPickPct(seedStr: string): Promise<void> {
       if (!total) continue;
 
       const arr = top3ByCell[k] || [];
-      const hit = arr.find(x => Number(x.cardId) === Number(card.id));
+      const hit = arr.find((x) => Number(x.cardId) === Number(card.id));
       const count = hit ? Number(hit.cnt ?? 0) : 0;
 
       const pct = Math.round((count / total) * 1000) / 10; // 1 tizedes
@@ -524,7 +524,6 @@ async function refreshCellPickPct(seedStr: string): Promise<void> {
     }
   }
 }
-
 
 async function openResults(seedStr: string): Promise<void> {
   const back = $("resultBack");
@@ -594,7 +593,6 @@ async function openResults(seedStr: string): Promise<void> {
     }
   }
 }
-
 
 function closeResults(): void {
   const back = $("resultBack");
@@ -786,6 +784,13 @@ function normalizeCard(raw: YgoApiCard): Card {
    UI wiring
    ========================= */
 
+function updateSubmitUI(): void {
+  const submit = $("submitBtn") as HTMLButtonElement | null;
+  if (!submit) return;
+
+  submit.textContent = hasSubmitted ? "View results" : "Submit";
+}
+
 function bindButtons(): void {
   const reset = $("resetBtn") as HTMLButtonElement | null;
   const submit = $("submitBtn") as HTMLButtonElement | null;
@@ -804,11 +809,21 @@ function bindButtons(): void {
       renderBoard(currentSeedStr);
       tick();
       setStatus("Reset.");
+
+      hasSubmitted = false;
+      updateSubmitUI();
     };
   }
 
   if (submit) {
     submit.onclick = async () => {
+      // ✅ ha már volt submit: csak results megnyitása
+      if (hasSubmitted) {
+        setStatus("");
+        await openResults(currentSeedStr);
+        return;
+      }
+
       for (let r = 0; r < 3; r++) {
         for (let c = 0; c < 3; c++) {
           const card = grid[r][c];
@@ -828,12 +843,15 @@ function bindButtons(): void {
 
       await recordSubmit(currentSeedStr);
 
-      // ✅ NEW: Submit után cellánként frissítjük a community %-okat és kiírjuk a táblára
+      // ✅ Submit után cellánként frissítjük a community %-okat és kiírjuk a táblára
       await refreshCellPickPct(currentSeedStr);
       renderBoard(currentSeedStr);
 
       setStatus("✅ All cells are valid! (Saved to global community stats)");
       await openResults(currentSeedStr);
+
+      hasSubmitted = true;
+      updateSubmitUI();
     };
   }
 }
@@ -919,6 +937,10 @@ async function init(): Promise<void> {
   startTs = Date.now();
   tick();
   setStatus("");
+
+  // ✅ init UI state
+  hasSubmitted = false;
+  updateSubmitUI();
 }
 
 init().catch((e) => {
