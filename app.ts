@@ -190,6 +190,7 @@ function renderBoard(seedStr: string): void {
 
       if (wrong[r][c]) cell.classList.add("wrong");
       if (grid[r][c]) cell.classList.add("picked");
+      if (hasSubmitted) cell.classList.add("locked");
 
       const card = grid[r][c];
       const cnt = cellSolutionCounts[r][c] ?? 0;
@@ -197,7 +198,6 @@ function renderBoard(seedStr: string): void {
       if (card) {
         const small = cardImageUrlById(card.id);
         const pct = cellPickPct[r][c];
-
         const tier = pct == null ? "" : pct >= 90 ? "hot" : pct <= 10 ? "low" : "mid";
 
         cell.innerHTML = `
@@ -297,31 +297,28 @@ function openPicker(seedStr: string, r: number, c: number): void {
 
   activeCell = { r, c };
 
-  const rowRule = rowRules[r];
-  const colRule = colRules[c];
-
   // ✅ used = minden lerakott kártya, KIVÉVE ami ebben a cellában van (hogy lehessen cserélni)
   const used = new Set(grid.flat().filter(Boolean).map((x) => String((x as Card).id)));
   const current = grid[r][c];
   if (current) used.delete(String(current.id));
 
-  // ✅ day-based filtering + szabály matches
+  // ✅ IMPORTANT: a picker MOST már NEM szűr cell rule-ra
+  // csak napi típus + "már használt" tiltás
   ACTIVE_CARDS = CARDS.filter((card) => {
     if (used.has(String(card.id))) return false;
 
-    if (DAY_IS_SPELLTRAP) {
-      if (card.kind === "monster") return false;
-    } else {
-      if (card.kind !== "monster") return false;
-    }
-
-    return matchesCell(card, rowRule, colRule);
+    if (DAY_IS_SPELLTRAP) return card.kind !== "monster";
+    return card.kind === "monster";
   });
 
   ACTIVE_CARDS.sort((a, b) => a.name.localeCompare(b.name));
 
+  const rowRule = rowRules[r];
+  const colRule = colRules[c];
+
   const titleEl = $("modalTitle");
   if (titleEl) titleEl.textContent = `Choose a card • ${rowRule.label}+${colRule.label}`;
+
   if (searchEl) searchEl.value = "";
   renderList("");
 
@@ -423,18 +420,14 @@ async function pickCard(card: Card): Promise<void> {
 
   const ok = matchesCell(card, rowRule, colRule);
 
+  // ✅ mindenképp lerakjuk (így lehet hibázni)
+  grid[r][c] = card;
+  wrong[r][c] = !ok;
+
   if (!ok) {
-    wrong[r][c] = true;
     mistakes++;
     shakeCell(r, c);
-    closePicker();
-    renderBoard(currentSeedStr);
-    tick();
-    return;
   }
-
-  wrong[r][c] = false;
-  grid[r][c] = card;
 
   // először nullázunk, hogy ne legyen félrevezető régi adat
   cellPickPct[r][c] = null;
@@ -443,7 +436,7 @@ async function pickCard(card: Card): Promise<void> {
   renderBoard(currentSeedStr);
   tick();
 
-  // ✅ már submit előtt is frissítjük a %-okat (ha van global adat)
+  // ✅ frissítjük a %-okat (ha van global adat)
   refreshCellPickPct(currentSeedStr)
     .then(() => renderBoard(currentSeedStr))
     .catch(() => {});

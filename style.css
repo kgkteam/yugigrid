@@ -312,7 +312,16 @@ body::before{
   text-align: center;
   word-break: break-word;
   overflow-wrap: anywhere;
+
+  /* ✅ FIX: 2 sor hely mindig */
+  height: 2.4em;                 /* kb 2 sor */
+  overflow: hidden;
+
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
+
 
 .cell-center{
   height: 100%;
@@ -325,10 +334,11 @@ body::before{
 .cardimg{
   width: 70px;
   height: 100px;
-  object-fit: cover;
+  object-fit: contain; /* cover helyett */
   border-radius: 8px;
   flex: 0 0 auto;
 }
+
 
 .cellCard{
   position: relative;
@@ -338,9 +348,12 @@ body::before{
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start; /* ✅ ne center */
+  padding-top: 6px;           /* ✅ fix top */
   gap: 8px;
 }
+
+
 
 /* ===== % BADGE ===== */
 .usageBadge{
@@ -381,6 +394,25 @@ body::before{
     0 0 18px rgba(124,92,255,.22),
     0 10px 28px rgba(0,0,0,.35);
 }
+
+/* ===== LOCKED CELLS (submit után) ===== */
+.cell.locked{
+  cursor: default;
+}
+
+.cell.locked:hover{
+  transform: none;
+  filter: none;
+  box-shadow: var(--shadowSoft);
+  border-color: rgba(255,255,255,.14);
+}
+
+/* submit után a % badge se animáljon */
+.cell.locked:hover .usageBadge{
+  transform: none;
+  box-shadow: 0 10px 28px rgba(0,0,0,.35);
+}
+
 
 /* opcionális: low/hot ha használsz data-tier-t */
 .usageBadge[data-tier="low"]{
