@@ -189,16 +189,6 @@ body::before{
   font-weight: 950;
 }
 
-/* ===== STATUS + DAY BADGE ===== */
-.statusRow{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  flex-wrap:wrap;
-  margin: 8px 0 14px;
-}
-
 .status{
   min-height: 20px;
   color: var(--muted);
