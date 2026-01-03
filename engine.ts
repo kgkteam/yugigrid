@@ -103,6 +103,47 @@ export function dateSeed(): SeedObj {
 }
 
 /* =========================
+   DAY TYPE (single source of truth)
+   ========================= */
+
+/* =========================
+   DAY TYPE (single source of truth)
+   ========================= */
+
+export type DayType = "Monster" | "Spell/Trap";
+
+/**
+ * 20% eséllyel Spell/Trap, különben Monster.
+ * Determinisztikus: ugyanarra a seedre mindig ugyanaz.
+ */
+export function getSystemDayType(): DayType {
+  const { n } = dateSeed();
+
+  // ugyanaz a RNG, amit máshol is használsz
+  const rand = mulberry32((Number.isFinite(n) ? n : 123456) >>> 0);
+
+  return rand() < 0.20 ? "Spell/Trap" : "Monster";
+}
+
+export function isSpellTrapDay(): boolean {
+  return getSystemDayType() === "Spell/Trap";
+}
+
+export function getSystemDayLabel(): string {
+  // UI-hoz: pl. Monday/Tuesday...
+  const { s } = dateSeed();
+  if (/^\d{8}$/.test(s)) {
+    const y = Number(s.slice(0, 4));
+    const m = Number(s.slice(4, 6));
+    const d = Number(s.slice(6, 8));
+    const dt = new Date(y, m - 1, d); // local, ugyanúgy mint dateSeed()
+    const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+    return dayNames[dt.getDay()];
+  }
+  return "Day";
+}
+
+/* =========================
    MATCHING
    ========================= */
 
@@ -117,16 +158,6 @@ function unifiedLevel(card: Card | null | undefined): number | null {
 
 export function matches(card: Card, rule: Rule): boolean {
   if (!rule) return false;
-
-  // AND
-  /*if (rule.key === "all" && Array.isArray((rule as RuleGroupAll).rules)) {
-    return (rule as RuleGroupAll).rules.every((r) => matches(card, r));
-  }
-
-  // OR
-  if (rule.key === "any" && Array.isArray((rule as RuleGroupAny).rules)) {
-    return (rule as RuleGroupAny).rules.some((r) => matches(card, r));
-  }*/
 
   let v: unknown;
 
@@ -229,14 +260,6 @@ export function pickRules(rand: RNG, pool: Rule[], n: number): Rule[] {
    RULE COMPATIBILITY
    ========================= */
 
-/*function flatten(rule: Rule | null | undefined): Rule[] {
-  if (!rule) return [];
-  if ((rule.key === "all" || rule.key === "any") && Array.isArray(rule.rules)) {
-    return rule.rules.flatMap(flatten);
-  }
-  return [rule];
-}*/
-
 function isTypeRule(rule: Rule, value: string): boolean {
   return rule.key === "type" && rule.op === "eq" && rule.value === value;
 }
@@ -304,14 +327,7 @@ function rulesCompatibleSimple(a: Rule, b: Rule): boolean {
 }
 
 export function rulesCompatible(a: Rule, b: Rule): boolean {
-  /*const A = flatten(a);
-  const B = flatten(b);
-
-  for (const ra of A) {
-    for (const rb of B) {*/
-      if (!rulesCompatibleSimple(a, b)) return false;
-    /*}
-  }*/
+  if (!rulesCompatibleSimple(a, b)) return false;
   return true;
 }
 
@@ -323,11 +339,6 @@ function isSpellTrapishRule(rule: Rule): boolean {
   if (!rule) return false;
 
   if (rule.key === "desc") return true;
-
-  /*if ((rule.key === "all" || rule.key === "any") && Array.isArray(rule.rules)) {
-    return rule.rules.every(isSpellTrapishRule);
-  }*/
-
   if (rule.key === "race") return true;
   if (rule.key === "spellType") return true;
   if (rule.key === "trapType") return true;

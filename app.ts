@@ -106,6 +106,12 @@ let cellSolutionCounts: CellCounts = Array.from({ length: 3 }, () => Array(3).fi
    DOM helpers
    ========================= */
 
+   function renderDayType(isSpellTrap: boolean): void {
+  const el = $("dayType");
+  if (el) el.textContent = isSpellTrap ? "Spell/Trap" : "Monster";
+}
+
+
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T | null =>
   document.getElementById(id) as T | null;
 
@@ -788,6 +794,7 @@ async function init(): Promise<void> {
   // stable per seed
   const isSpellTrap = rand() < 0.2;
 
+  renderDayType(isSpellTrap);
 
   // choose correct pool
   const pool = isSpellTrap ? pools.spellTrapPool : pools.monsterPool;
