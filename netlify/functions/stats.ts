@@ -1,7 +1,7 @@
 // netlify/functions/stats.ts
 import { neon } from "@neondatabase/serverless";
 
-const sql = neon(process.env.DATABASE_URL as string);
+const sql = neon(process.env.NETLIFY_DATABASE_URL as string);
 
 function json(statusCode: number, body: unknown) {
   return {
