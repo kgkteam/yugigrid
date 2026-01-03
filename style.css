@@ -29,7 +29,8 @@
   --sideGap: 12px;
   --cellGap: 10px;
 
-  --cellH: 160px; /* one place to tweak height */
+  --cellH: 160px;
+  --cellW: 230px; /* állítható: 210-260 környéke */
 }
 
 *{ box-sizing:border-box; }
@@ -72,14 +73,17 @@ body::before{
 /* ===== TOPBAR ===== */
 .topbar{
   display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:16px;
-  flex-wrap:wrap;
-  margin: 8px 0 12px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: 18px 0 18px;
 }
 
-.brand{ min-width: 240px; }
+.brand{
+  min-width: 0;
+  text-align: center;
+}
 
 .brand h1{
   margin: 0 0 6px;
@@ -90,66 +94,36 @@ body::before{
 }
 
 .brand .sub{
-  color:var(--muted);
-  margin:0;
+  margin: 0;
+  color: var(--muted);
   font-size: 14px;
 }
 
 .topbar-right{
   display:flex;
   align-items:center;
-  justify-content:flex-end;
+  justify-content:center;
   gap:12px;
   flex-wrap:wrap;
 }
 
-.seedBox{
-  display:flex;
-  align-items:center;
-  gap:10px;
-
-  background: linear-gradient(180deg, var(--glass2), var(--glass));
-  border: 1px solid var(--stroke);
-  border-radius: var(--r14);
-  padding: 10px 12px;
-
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-
-  box-shadow: 0 10px 35px rgba(0,0,0,.25);
-  transition: transform .14s var(--ease), border-color .14s var(--ease);
-}
-.seedBox:hover{
-  transform: translateY(-1px);
-  border-color: rgba(124,92,255,.35);
-}
-
-.seedBox .lbl{
-  font-weight: 900;
-  font-size: 12px;
-  color: var(--muted);
-  letter-spacing: .2px;
-}
-
-#seed{
-  width: 210px;
-  max-width: 60vw;
-  background: rgba(255,255,255,.06);
-  border: 1px solid rgba(255,255,255,.12);
+.paypalPill{
+  text-decoration: none;
   color: var(--fg);
-  padding: 10px 12px;
-  border-radius: var(--r16);
-  outline:none;
-  transition: border-color .14s var(--ease), background .14s var(--ease), transform .14s var(--ease);
-}
-#seed:focus{
-  border-color: rgba(124,92,255,.62);
-  background: rgba(255,255,255,.08);
-  transform: translateY(-1px);
 }
 
-.statPills{ display:flex; gap:10px; }
+#paypalDonate{
+  color: #f5c542;
+  font-weight: 900;
+  text-decoration: none;
+}
 
+#paypalDonate:hover{
+  color: #ffd86b;
+  text-shadow: 0 0 12px rgba(245,197,66,.45);
+}
+
+/* ===== PILLS ===== */
 .pill{
   display:flex;
   flex-direction:column;
@@ -181,22 +155,6 @@ body::before{
 .pillValue{
   font-size: 16px;
   font-weight: 950;
-}
-
-/* ===== STATUS + DAY BADGE ===== */
-.statusRow{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  flex-wrap:wrap;
-  margin: 8px 0 14px;
-}
-
-.status{
-  min-height: 20px;
-  color: var(--muted);
-  font-weight: 800;
 }
 
 /* ===== RULE CARDS ===== */
@@ -246,7 +204,7 @@ body::before{
   grid-row: 1;
 
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3, var(--cellW));
   gap: var(--cellGap);
 }
 
@@ -271,7 +229,7 @@ body::before{
   grid-row: 2;
 
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3, var(--cellW));
   gap: var(--cellGap);
 }
 
@@ -356,25 +314,11 @@ body::before{
   overflow-wrap: anywhere;
 }
 
-.meta{
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.35;
-}
-
 .cell-center{
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.cell-solutions{
-  position: absolute;
-  right: 10px;
-  bottom: 8px;
-  font-size: 12px;
-  opacity: .75;
 }
 
 /* ===== BOARD picked card wrapper ===== */
@@ -398,11 +342,11 @@ body::before{
   gap: 8px;
 }
 
-/* ===== SMART % BADGE (board + results) ===== */
+/* ===== % BADGE ===== */
 .usageBadge{
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: -2px;     /* feljebb */
+  right: -2px;   /* jobbra */
   z-index: 3;
 
   font-size: 12px;
@@ -418,7 +362,7 @@ body::before{
   -webkit-backdrop-filter: blur(10px);
 
   box-shadow: 0 10px 28px rgba(0,0,0,.35);
-  color: rgba(200,200,255,.95);
+  color: rgba(233,240,255,.95);
 
   pointer-events: none;
 
@@ -429,29 +373,26 @@ body::before{
     filter .18s var(--ease);
 }
 
-/* hover: subtle flash */
-.cell:hover .usageBadge,
-.resultCard:hover .usageBadge{
-  transform: scale(1.06);
+/* hover: subtle flash (csak cellán) */
+.cell:hover .usageBadge{
+  transform: scale(1.04);
   box-shadow:
-    0 0 0 1px rgba(124,92,255,.35),
-    0 0 26px rgba(124,92,255,.45),
-    0 0 70px rgba(124,92,255,.30);
+    0 0 0 1px rgba(124,92,255,.22),
+    0 0 18px rgba(124,92,255,.22),
+    0 10px 28px rgba(0,0,0,.35);
 }
 
-/* low (0-10%) */
+/* opcionális: low/hot ha használsz data-tier-t */
 .usageBadge[data-tier="low"]{
-  opacity: .45;
+  opacity: .55;
   filter: grayscale(.25);
 }
-
-/* hot (90%+) */
 .usageBadge[data-tier="hot"]{
+  filter: brightness(1.12);
   box-shadow:
-    0 0 0 1px rgba(124,92,255,.35),
-    0 0 22px rgba(124,92,255,.45),
-    0 0 60px rgba(124,92,255,.35);
-  filter: brightness(1.15);
+    0 0 0 1px rgba(124,92,255,.22),
+    0 0 22px rgba(124,92,255,.28),
+    0 10px 28px rgba(0,0,0,.35);
 }
 
 /* ===== SHAKE ===== */
@@ -699,7 +640,7 @@ button:disabled,
 }
 .list::-webkit-scrollbar-thumb:hover{ background: rgba(255,255,255,.22); }
 
-/* ===== RESULTS ===== */
+/* ===== RESULTS (vissza a régi listásra) ===== */
 .resultList{
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -721,64 +662,48 @@ button:disabled,
 }
 
 .resultRow{
+  display:flex;
+  align-items:center;
+  gap:10px;
   margin-bottom: 10px;
 }
 .resultRow:last-child{ margin-bottom: 0; }
 
-.resultCard{
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-
-  padding: 12px;
-  border-radius: var(--r14);
-
-  background: rgba(255,255,255,.03);
-  border: 1px solid rgba(255,255,255,.10);
-
-  box-shadow: 0 12px 35px rgba(0,0,0,.20);
-  transition: transform .14s var(--ease), border-color .14s var(--ease), background .14s var(--ease);
-}
-
-.resultCard:hover{
-  transform: translateY(-1px);
-  border-color: rgba(124,92,255,.35);
-  background: rgba(255,255,255,.05);
-}
-
-.resultImg{
-  width: 90px;
+.resultThumb{
+  width: 40px;
   height: auto;
   border-radius: 8px;
   border: 1px solid rgba(255,255,255,.12);
+  flex: 0 0 auto;
 }
 
-.resultName{
+.resultRow .nm{
   font-size: 12px;
-  font-weight: 950;
+  font-weight: 900;
   line-height: 1.2;
-  text-align: center;
-
-  max-width: 220px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  padding: 0 10px;
+  max-width: 220px;
 }
 
-.resultMeta{
+.pctBadge{
+  margin-left: auto;
   font-size: 11px;
-  color: var(--muted);
-  font-weight: 800;
+  font-weight: 950;
+  padding: 4px 10px;
+  border-radius: 999px;
+
+  background: rgba(0,0,0,.45);
+  border: 1px solid rgba(255,255,255,.12);
+  color: rgba(233,240,255,.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 980px){
-  .topbar{ justify-content:center; }
   .topbar-right{ justify-content:center; }
-  .statusRow{ justify-content:center; }
 }
 
 @media (max-width: 900px){
@@ -794,6 +719,7 @@ button:disabled,
   .colRules{
     grid-column: 1;
     grid-row: 1;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .rowRules{
@@ -824,60 +750,4 @@ button:disabled,
 
 @media (max-width: 560px){
   .resultList{ grid-template-columns: 1fr; }
-}
-
-:root{
-  --cellW: 230px; /* állítható: 210-260 környéke */
-}
-
-.colRules{ grid-template-columns: repeat(3, var(--cellW)); }
-.board{ grid-template-columns: repeat(3, var(--cellW)); }
-
-/* ===== TOPBAR: centered title + centered stats row ===== */
-.topbar{
-  display:flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  margin: 18px 0 18px;
-}
-
-.brand{
-  min-width: 0;
-  text-align: center;
-}
-
-.brand h1{
-  margin: 0 0 6px;
-}
-
-.brand .sub{
-  margin: 0;
-  color: var(--muted);
-  font-size: 14px;
-}
-
-.topbar-right{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:12px;
-  flex-wrap:wrap;
-}
-
-.paypalPill{
-  text-decoration: none;
-  color: var(--fg);
-}
-
-#paypalDonate{
-  color: #f5c542; /* aranysárga */
-  font-weight: 900;
-  text-decoration: none;
-}
-
-#paypalDonate:hover{
-  color: #ffd86b;
-  text-shadow: 0 0 12px rgba(245,197,66,.45);
 }

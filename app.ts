@@ -102,23 +102,23 @@ let activeCell: { r: number; c: number } | null = null;
 const MIN_SOLUTIONS_PER_CELL = 20;
 let cellSolutionCounts: CellCounts = Array.from({ length: 3 }, () => Array(3).fill(0));
 
-// ✅ NEW: cellánként a TE lerakott lapod community %-a (Submit után töltjük)
+// ✅ cellánként a TE lerakott lapod community %-a
 let cellPickPct: (number | null)[][] = Array.from({ length: 3 }, () => Array(3).fill(null));
 
-// ✅ NEW: Submit → View results mód
+// ✅ Submit → View results mód
 let hasSubmitted = false;
 
 /* =========================
    DOM helpers
    ========================= */
 
+const $ = <T extends HTMLElement = HTMLElement>(id: string): T | null =>
+  document.getElementById(id) as T | null;
+
 function renderDayType(isSpellTrap: boolean): void {
   const el = $("dayType");
   if (el) el.textContent = isSpellTrap ? "Spell/Trap" : "Monster";
 }
-
-const $ = <T extends HTMLElement = HTMLElement>(id: string): T | null =>
-  document.getElementById(id) as T | null;
 
 function escapeHtml(str: unknown): string {
   return String(str).replace(/[&<>"']/g, (m) =>
@@ -198,8 +198,7 @@ function renderBoard(seedStr: string): void {
         const small = cardImageUrlById(card.id);
         const pct = cellPickPct[r][c];
 
-        const tier =
-          pct == null ? "" : pct >= 90 ? "hot" : pct <= 10 ? "low" : "mid";
+        const tier = pct == null ? "" : pct >= 90 ? "hot" : pct <= 10 ? "low" : "mid";
 
         cell.innerHTML = `
           <div class="cellCard">
@@ -236,7 +235,6 @@ function renderBoard(seedStr: string): void {
   }
 }
 
-
 /* =========================
    MODAL
    ========================= */
@@ -249,7 +247,6 @@ let modalBack: HTMLElement | null,
 let modalBound = false;
 
 function bindModal(): boolean {
-  // mindig friss DOM query (ne cache-eljen nullt)
   modalBack = $("modalBack");
   listEl = $("list");
   searchEl = $("search") as HTMLInputElement | null;
@@ -276,7 +273,6 @@ function bindModal(): boolean {
     return false;
   }
 
-  // csak egyszer bindeljük az eseményeket
   if (!modalBound) {
     (closeBtn as HTMLButtonElement).onclick = closePicker;
 
@@ -309,9 +305,7 @@ function openPicker(seedStr: string, r: number, c: number): void {
   const current = grid[r][c];
   if (current) used.delete(String(current.id));
 
-  // ✅ day-based filtering:
-  // - Spell/Trap day -> only spell+trap
-  // - Monster day -> only monsters
+  // ✅ day-based filtering + szabály matches
   ACTIVE_CARDS = CARDS.filter((card) => {
     if (used.has(String(card.id))) return false;
 
@@ -321,11 +315,9 @@ function openPicker(seedStr: string, r: number, c: number): void {
       if (card.kind !== "monster") return false;
     }
 
-    return true;
-    // matchesCell(card, rowRule, colRule);
+    return matchesCell(card, rowRule, colRule);
   });
 
-  // NOTE: sort itt maradhat, de picit drága. Ha még gyorsítanál, init-ben egyszer rendezd a CARDS-ot.
   ACTIVE_CARDS.sort((a, b) => a.name.localeCompare(b.name));
 
   const titleEl = $("modalTitle");
@@ -346,20 +338,15 @@ function renderList(q: string): void {
   if (!listEl) return;
 
   const MAX_SHOW = 50;
-
   const needle = String(q || "").trim().toLowerCase();
 
-  let list = needle
-    ? ACTIVE_CARDS.filter((c) => c.name.toLowerCase().includes(needle))
-    : ACTIVE_CARDS;
+  let list = needle ? ACTIVE_CARDS.filter((c) => c.name.toLowerCase().includes(needle)) : ACTIVE_CARDS;
 
-  // ✅ ha nincs keresés, ne renderelj ezreket
   const limited = !needle && list.length > MAX_SHOW;
   if (limited) list = list.slice(0, MAX_SHOW);
 
   listEl.innerHTML = "";
 
-  // ✅ kis infó, ha limitált
   if (limited) {
     const info = document.createElement("div");
     info.style.opacity = ".7";
@@ -397,7 +384,9 @@ function renderList(q: string): void {
       </div>
     `;
 
-    (item.querySelector("button") as HTMLButtonElement).onclick = () => pickCard(card);
+    (item.querySelector("button") as HTMLButtonElement).onclick = () => {
+      void pickCard(card);
+    };
     listEl.appendChild(item);
   }
 }
@@ -412,7 +401,6 @@ function shakeCell(r: number, c: number): void {
   const cell = b.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
   if (!cell) return;
   cell.classList.remove("shake");
-  // force reflow
   void (cell as HTMLElement).offsetWidth;
   cell.classList.add("shake");
 }
@@ -448,12 +436,17 @@ async function pickCard(card: Card): Promise<void> {
   wrong[r][c] = false;
   grid[r][c] = card;
 
-  // ✅ ha új pick volt, a régi %-okat érdemes törölni (különben félrevezető lehet)
+  // először nullázunk, hogy ne legyen félrevezető régi adat
   cellPickPct[r][c] = null;
 
   closePicker();
   renderBoard(currentSeedStr);
   tick();
+
+  // ✅ már submit előtt is frissítjük a %-okat (ha van global adat)
+  refreshCellPickPct(currentSeedStr)
+    .then(() => renderBoard(currentSeedStr))
+    .catch(() => {});
 }
 
 /* =========================
@@ -482,7 +475,6 @@ async function recordSubmit(seedStr: string): Promise<void> {
     }
   }
 
-  // ne dobjon hibát, ha 1 request elhasal
   await Promise.allSettled(jobs);
 }
 
@@ -500,9 +492,7 @@ async function fetchGlobalStats(seedStr: string): Promise<GlobalStats> {
   return (await res.json()) as GlobalStats;
 }
 
-// ✅ NEW: Submit után cellánként kiszámoljuk a TE pickjeid %-át
 async function refreshCellPickPct(seedStr: string): Promise<void> {
-  // 3x3 grid – null = nincs adat
   cellPickPct = Array.from({ length: 3 }, () => Array(3).fill(null));
 
   let st: GlobalStats;
@@ -520,9 +510,7 @@ async function refreshCellPickPct(seedStr: string): Promise<void> {
       const card = grid[r][c];
       if (!card) continue;
 
-      // FIGYELEM: ez egyezzen a backenddel ("0,0" vagy "r0c0")
       const k = `${r},${c}`;
-
       const total = Number(totalsByCell[k] ?? 0);
       if (!total) continue;
 
@@ -541,7 +529,7 @@ async function openResults(seedStr: string): Promise<void> {
   const out = $("resultList");
   if (!back || !out) return;
 
-  out.innerHTML = `<div style="opacity:.7; padding:12px;">Loading community picks…</div>`;
+  out.innerHTML = `<div style="opacity:.7; padding:12px;">Loading picks…</div>`;
   back.style.display = "flex";
 
   let st: GlobalStats;
@@ -560,7 +548,6 @@ async function openResults(seedStr: string): Promise<void> {
 
   for (let r = 0; r < 3; r++) {
     for (let c = 0; c < 3; c++) {
-      // FIGYELEM: egyezzen a backend cell kulcsával ("0,0" vagy "r0c0")
       const k = `${r},${c}`;
 
       const cell = document.createElement("div");
@@ -572,7 +559,7 @@ async function openResults(seedStr: string): Promise<void> {
       cell.appendChild(title);
 
       const cellTotal = Number(totalsByCell[k] ?? 0);
-      const picks = top3ByCell[k] || []; // [{cardId,cnt}, ...]
+      const picks = top3ByCell[k] || [];
 
       if (!picks.length || !cellTotal) {
         const empty = document.createElement("div");
@@ -580,29 +567,24 @@ async function openResults(seedStr: string): Promise<void> {
         empty.textContent = "No data yet.";
         cell.appendChild(empty);
       } else {
-      for (const p of picks) {
-      const id = String(p.cardId);
-      const count = Number(p.cnt ?? 0);
-      const pct = Math.round((count / cellTotal) * 1000) / 10;
+        for (const p of picks) {
+          const id = String(p.cardId);
+          const count = Number(p.cnt ?? 0);
+          const pct = Math.round((count / cellTotal) * 1000) / 10;
 
-      const tier = pct >= 90 ? "hot" : pct <= 10 ? "low" : "mid";
+          const card = CARD_BY_ID.get(id);
 
-      const card = CARD_BY_ID.get(id);
-
-      const row = document.createElement("div");
-      row.className = "resultRow";
-      row.innerHTML = `
-        <div class="resultCard">
-          <div class="usageBadge" data-tier="${tier}">${pct}%</div>
-          <img class="resultImg" src="${escapeHtml(cardImageUrlById(id))}" alt="">
-          <div class="resultName">${escapeHtml(card?.name || id)}</div>
-          <div class="resultMeta">${count}/${cellTotal}</div>
-        </div>
-      `;
-
-  cell.appendChild(row);
-}
-
+          const row = document.createElement("div");
+          row.className = "resultRow";
+          row.innerHTML = `
+            <img class="resultThumb" src="${escapeHtml(cardImageUrlById(id))}" alt="">
+            <div class="resTxt" style="min-width:0;">
+              <div class="nm">${escapeHtml(card?.name || id)}</div>
+            </div>
+            <div class="pctBadge">${pct}%</div>
+          `;
+          cell.appendChild(row);
+        }
       }
 
       out.appendChild(cell);
@@ -803,7 +785,6 @@ function normalizeCard(raw: YgoApiCard): Card {
 function updateSubmitUI(): void {
   const submit = $("submitBtn") as HTMLButtonElement | null;
   if (!submit) return;
-
   submit.textContent = hasSubmitted ? "View results" : "Submit";
 }
 
@@ -833,14 +814,13 @@ function bindButtons(): void {
 
   if (submit) {
     submit.onclick = async () => {
-      // ✅ ha már volt submit: csak results megnyitása
       if (hasSubmitted) {
         setStatus("");
         await openResults(currentSeedStr);
         return;
       }
 
-      // ✅ validáció
+      // validáció
       for (let r = 0; r < 3; r++) {
         for (let c = 0; c < 3; c++) {
           const card = grid[r][c];
@@ -858,18 +838,14 @@ function bindButtons(): void {
         return;
       }
 
-      // ✅ UI lock azonnal (nehogy double-click submitoljon)
       hasSubmitted = true;
       updateSubmitUI();
 
-      // ✅ Results azonnal – ez még a korábbi community adatokat mutatja
       setStatus("✅ Showing community results (your pick will appear after refresh)");
-      openResults(currentSeedStr); // <-- NINCS await, ne blokkoljon
+      void openResults(currentSeedStr);
 
-      // ✅ Mentés háttérben (nem blokkolja az UI-t / results-t)
       recordSubmit(currentSeedStr)
         .then(async () => {
-          // opcionális: a cellákon a "Community: %" frissítése, ha kell
           await refreshCellPickPct(currentSeedStr);
           renderBoard(currentSeedStr);
           setStatus("✅ Saved!");
@@ -882,20 +858,17 @@ function bindButtons(): void {
   }
 }
 
-
 /* =========================
    INIT
    ========================= */
 
 async function init(): Promise<void> {
-  // ✅ törli a query-t és hash-t (pl. ?seed=, #asd), de nem töri el az appot
   if (location.search || location.hash) {
     history.replaceState(null, "", location.pathname);
   }
 
   const seedObj = dateSeed();
   const seedStr = seedObj.s;
-
   currentSeedStr = seedStr;
 
   bindButtons();
@@ -912,18 +885,12 @@ async function init(): Promise<void> {
   const pools = buildRulePools(RULE_POOL);
   const rand = mulberry32(base);
 
-  // stable per seed (20% Spell/Trap day)
   const isSpellTrap = rand() < 0.2;
-
   renderDayType(isSpellTrap);
-
-  // choose correct rule pool
-  const pool = isSpellTrap ? pools.spellTrapPool : pools.monsterPool;
-
-  // store day type so picker can filter properly
   DAY_IS_SPELLTRAP = isSpellTrap;
 
-  // IMPORTANT: generator needs the correct card universe
+  const pool = isSpellTrap ? pools.spellTrapPool : pools.monsterPool;
+
   const generationCards = CARDS.filter((card) => {
     if (isSpellTrap) return card.kind !== "monster";
     return card.kind === "monster";
@@ -965,7 +932,6 @@ async function init(): Promise<void> {
   tick();
   setStatus("");
 
-  // ✅ init UI state
   hasSubmitted = false;
   updateSubmitUI();
 }
@@ -1005,8 +971,6 @@ window.__YG_DEBUG__ = {
 };
 
 setInterval(tick, 250);
-
-// handy: clear cards cache from console
 window.__YG_CLEAR_CACHE__ = clearCardsCache;
 
 export {};
