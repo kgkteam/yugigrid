@@ -284,14 +284,16 @@ function bindModal(): boolean {
 
 function openPicker(seedStr: string, r: number, c: number): void {
   if (!bindModal()) return;
-  if (grid[r][c]) return;
 
   activeCell = { r, c };
 
   const rowRule = rowRules[r];
   const colRule = colRules[c];
 
+    // ✅ used = minden lerakott kártya, KIVÉVE ami ebben a cellában van (hogy lehessen cserélni)
   const used = new Set(grid.flat().filter(Boolean).map((x) => String((x as Card).id)));
+  const current = grid[r][c];
+  if (current) used.delete(String(current.id));
 
   // ✅ day-based filtering:
   // - Spell/Trap day -> only spell+trap
