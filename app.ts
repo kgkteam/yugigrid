@@ -297,16 +297,10 @@ function openPicker(seedStr: string, r: number, c: number): void {
 
   activeCell = { r, c };
 
-  // ✅ used = minden lerakott kártya, KIVÉVE ami ebben a cellában van (hogy lehessen cserélni)
-  const used = new Set(grid.flat().filter(Boolean).map((x) => String((x as Card).id)));
-  const current = grid[r][c];
-  if (current) used.delete(String(current.id));
+  // ❌ NINCS többé "used" szűrés
+  // a kártyák áthelyezését a pickCard() kezeli
 
-  // ✅ IMPORTANT: a picker MOST már NEM szűr cell rule-ra
-  // csak napi típus + "már használt" tiltás
   ACTIVE_CARDS = CARDS.filter((card) => {
-    if (used.has(String(card.id))) return false;
-
     if (DAY_IS_SPELLTRAP) return card.kind !== "monster";
     return card.kind === "monster";
   });
@@ -317,7 +311,9 @@ function openPicker(seedStr: string, r: number, c: number): void {
   const colRule = colRules[c];
 
   const titleEl = $("modalTitle");
-  if (titleEl) titleEl.textContent = `Choose a card • ${rowRule.label}+${colRule.label}`;
+  if (titleEl) {
+    titleEl.textContent = `Choose a card • ${rowRule.label}+${colRule.label}`;
+  }
 
   if (searchEl) searchEl.value = "";
   renderList("");
@@ -330,6 +326,7 @@ function closePicker(): void {
   if (modalBack) modalBack.style.display = "none";
   activeCell = null;
 }
+
 
 function renderList(q: string): void {
   if (!listEl) return;
