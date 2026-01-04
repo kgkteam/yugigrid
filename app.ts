@@ -435,19 +435,21 @@ async function pickCard(card: Card): Promise<void> {
   const rowRule = rowRules[r];
   const colRule = colRules[c];
 
-const ok = matchesCell(card, rowRule, colRule);
+  const ok = matchesCell(card, rowRule, colRule);
 
-    // 🔁 ha ez a kártya már máshol van → vegyük ki onnan
-    const prev = findCardInGrid(card.id);
-    if (prev && (prev.r !== r || prev.c !== c)) {
+  // 🔁 ha ez a kártya már máshol van → vegyük ki onnan
+  const prev = findCardInGrid(card.id);
+  if (prev && (prev.r !== r || prev.c !== c)) {
       grid[prev.r][prev.c] = null;
       wrong[prev.r][prev.c] = false;
       cellPickPct[prev.r][prev.c] = null;
-    }
+  }
 
-// ✅ most rakjuk be az új helyre
-grid[r][c] = card;
-wrong[r][c] = !ok;
+  // ✅ most rakjuk be az új helyre
+  if (ok) {
+    grid[r][c] = card;
+  }
+  wrong[r][c] = !ok;
 
   // először nullázunk, hogy ne legyen félrevezető régi adat
   cellPickPct[r][c] = null;
@@ -463,7 +465,7 @@ wrong[r][c] = !ok;
   }
 
   // ✅ frissítjük a %-okat (ha van global adat)
-// ✅ frissítjük a %-okat (ha van global adat) — NINCS full rerender, nincs blink
+  // ✅ frissítjük a %-okat (ha van global adat) — NINCS full rerender, nincs blink
   refreshCellPickPct(currentSeedStr)
     .then(() => {
       updateCellBadge(r, c);
