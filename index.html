@@ -4,17 +4,44 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <title>YugiGrid – Daily Yu-Gi-Oh! Matrix Puzzle</title>
+  <!-- PRIMARY TITLE (Google SERP) -->
+  <title>YugiGrid – Daily Yu-Gi-Oh! Grid Game</title>
 
+  <!-- SEO TITLE (backup) -->
+  <meta name="title" content="YugiGrid – Daily Yu-Gi-Oh! Grid Game" />
+
+  <!-- DESCRIPTION -->
   <meta
     name="description"
-    content="YugiGrid - A daily Yu-Gi-Oh! puzzle"
+    content="YugiGrid is a daily Yu-Gi-Oh! grid puzzle."
   />
 
+  <!-- CANONICAL -->
   <link rel="canonical" href="https://yugigrid.com/" />
 
+  <!-- OPEN GRAPH (Google / Discord / Facebook) -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="YugiGrid – Daily Yu-Gi-Oh! Grid Game" />
+  <meta property="og:description" content="A daily Yu-Gi-Oh! grid puzzle." />
+  <meta property="og:site_name" content="YugiGrid" />
+  <meta property="og:url" content="https://yugigrid.com/" />
+  <meta property="og:image" content="https://yugigrid.com/og.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+
+  <!-- SITE NAME FIX (IMPORTANT FOR GOOGLE) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "YugiGrid",
+    "url": "https://yugigrid.com/"
+  }
+  </script>
+
+  <!-- STYLES & ICON -->
   <link rel="stylesheet" href="./style.css" />
-  <link rel="icon" type="image/png" href="/favicon.png?v=3">
+  <link rel="icon" type="image/png" href="/favicon.png?v=3" />
 </head>
 
 <body>
@@ -24,7 +51,7 @@
     <div class="topbar">
       <div class="brand">
         <h1>YugiGrid</h1>
-        <p class="sub">Daily Yu-Gi-Oh! matrix challenge</p>
+        <p class="sub">Daily Yu-Gi-Oh! challenge</p>
       </div>
 
       <div class="topbar-right">
@@ -56,7 +83,7 @@
       </div>
     </div>
 
-    <!-- ===== MATRIX LAYOUT ===== -->
+    <!-- ===== Grid LAYOUT ===== -->
     <div class="matrixWrap">
       <div class="corner"></div>
 
