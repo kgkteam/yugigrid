@@ -395,11 +395,30 @@ function renderList(q: string): void {
 function shakeCell(r: number, c: number): void {
   const b = $("board");
   if (!b) return;
-  const cell = b.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+
+  const cell = b.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`) as HTMLElement | null;
   if (!cell) return;
+
   cell.classList.remove("shake");
-  void (cell as HTMLElement).offsetWidth;
+  void cell.offsetWidth;      // force reflow, hogy újrainduljon
   cell.classList.add("shake");
+
+  // fontos: vedd is le, hogy a következő hibánál újra menjen
+  window.setTimeout(() => {
+    cell.classList.remove("shake");
+  }, 380);
+}
+
+function findCardInGrid(cardId: number | string): { r: number; c: number } | null {
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      const g = grid[r][c];
+      if (g && String(g.id) === String(cardId)) {
+        return { r, c };
+      }
+    }
+  }
+  return null;
 }
 
 let currentSeedStr = "";
@@ -418,23 +437,32 @@ async function pickCard(card: Card): Promise<void> {
   const rowRule = rowRules[r];
   const colRule = colRules[c];
 
-  const ok = matchesCell(card, rowRule, colRule);
+const ok = matchesCell(card, rowRule, colRule);
 
-  // ✅ mindenképp lerakjuk (így lehet hibázni)
-  grid[r][c] = card;
-  wrong[r][c] = !ok;
+    // 🔁 ha ez a kártya már máshol van → vegyük ki onnan
+    const prev = findCardInGrid(card.id);
+    if (prev && (prev.r !== r || prev.c !== c)) {
+      grid[prev.r][prev.c] = null;
+      wrong[prev.r][prev.c] = false;
+      cellPickPct[prev.r][prev.c] = null;
+    }
 
-  if (!ok) {
-    mistakes++;
-    shakeCell(r, c);
-  }
+// ✅ most rakjuk be az új helyre
+grid[r][c] = card;
+wrong[r][c] = !ok;
 
   // először nullázunk, hogy ne legyen félrevezető régi adat
   cellPickPct[r][c] = null;
 
   closePicker();
-  renderBoard(currentSeedStr);
+  renderBoard(currentSeedStr); // ⬅️ ELŐBB kirajzoljuk az új cellát
   tick();
+
+  if (!ok) {
+    mistakes++;
+    // ⬅️ UTÁNA rázzuk meg (DOM már létezik)
+    requestAnimationFrame(() => shakeCell(r, c));
+  }
 
   // ✅ frissítjük a %-okat (ha van global adat)
   refreshCellPickPct(currentSeedStr)
