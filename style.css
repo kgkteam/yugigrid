@@ -784,6 +784,8 @@ button:disabled,
   .cell{
     height: auto;
     min-height: 110px;
+    transform: translateZ(0);
+    will-change: transform;
   }
 
   .actions{ justify-content:center; }
