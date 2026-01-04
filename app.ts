@@ -200,13 +200,14 @@ function renderBoard(seedStr: string): void {
         const pct = cellPickPct[r][c];
         const tier = pct == null ? "" : pct >= 90 ? "hot" : pct <= 10 ? "low" : "mid";
 
+        // ✅ BADGE KINT a cellában (nem a .cellCard-ban), így fixen ugyanott lesz
         cell.innerHTML = `
+          ${
+            pct != null
+              ? `<div class="usageBadge" data-tier="${tier}">${pct}%</div>`
+              : ""
+          }
           <div class="cellCard">
-            ${
-              pct != null
-                ? `<div class="usageBadge" data-tier="${tier}">${pct}%</div>`
-                : ""
-            }
             <img class="cardimg"
               src="${escapeHtml(small)}"
               alt="${escapeHtml(card.name)}"
@@ -815,20 +816,25 @@ function updateCellBadge(r: number, c: number): void {
   const b = $("board");
   if (!b) return;
 
-  const cell = b.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+  const cell = b.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`) as HTMLElement | null;
   if (!cell) return;
+
+  // ✅ ha valaha bekerült badge a .cellCard-ba, takarítsuk ki
+  cell.querySelectorAll(".cellCard .usageBadge").forEach((x) => x.remove());
 
   const pct = cellPickPct[r][c];
   if (pct == null) return;
 
   const tier = pct >= 90 ? "hot" : pct <= 10 ? "low" : "mid";
 
-  let badge = cell.querySelector(".usageBadge") as HTMLElement | null;
+  // ✅ CSAK a cella közvetlen badge-ét keressük (ne descendant-et)
+  let badge = cell.querySelector(":scope > .usageBadge") as HTMLElement | null;
 
   if (!badge) {
     badge = document.createElement("div");
     badge.className = "usageBadge";
-    cell.appendChild(badge);
+    // ✅ legfelül legyen a cellában
+    cell.insertBefore(badge, cell.firstChild);
   }
 
   badge.dataset.tier = tier;
