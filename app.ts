@@ -810,6 +810,31 @@ function updateSubmitUI(): void {
   submit.textContent = hasSubmitted ? "View results" : "Submit";
 }
 
+// ✅ KINT kell lennie (globál scope), hogy pickCard() is elérje
+function updateCellBadge(r: number, c: number): void {
+  const b = $("board");
+  if (!b) return;
+
+  const cell = b.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+  if (!cell) return;
+
+  const pct = cellPickPct[r][c];
+  if (pct == null) return;
+
+  const tier = pct >= 90 ? "hot" : pct <= 10 ? "low" : "mid";
+
+  let badge = cell.querySelector(".usageBadge") as HTMLElement | null;
+
+  if (!badge) {
+    badge = document.createElement("div");
+    badge.className = "usageBadge";
+    cell.appendChild(badge);
+  }
+
+  badge.dataset.tier = tier;
+  badge.textContent = `${pct}%`;
+}
+
 function bindButtons(): void {
   const reset = $("resetBtn") as HTMLButtonElement | null;
   const submit = $("submitBtn") as HTMLButtonElement | null;
@@ -833,31 +858,6 @@ function bindButtons(): void {
       updateSubmitUI();
     };
   }
-
-    function updateCellBadge(r: number, c: number): void {
-    const b = $("board");
-    if (!b) return;
-
-    const cell = b.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
-    if (!cell) return;
-
-    const pct = cellPickPct[r][c];
-    if (pct == null) return;
-
-    const tier = pct >= 90 ? "hot" : pct <= 10 ? "low" : "mid";
-
-    let badge = cell.querySelector(".usageBadge") as HTMLElement | null;
-
-    if (!badge) {
-      badge = document.createElement("div");
-      badge.className = "usageBadge";
-      cell.appendChild(badge);
-    }
-
-    badge.dataset.tier = tier;
-    badge.textContent = `${pct}%`;
-  }
-
 
   if (submit) {
     submit.onclick = async () => {
