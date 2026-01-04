@@ -462,9 +462,13 @@ wrong[r][c] = !ok;
   }
 
   // ✅ frissítjük a %-okat (ha van global adat)
+// ✅ frissítjük a %-okat (ha van global adat) — NINCS full rerender, nincs blink
   refreshCellPickPct(currentSeedStr)
-    .then(() => renderBoard(currentSeedStr))
+    .then(() => {
+      updateCellBadge(r, c);
+    })
     .catch(() => {});
+
 }
 
 /* =========================
@@ -829,6 +833,31 @@ function bindButtons(): void {
       updateSubmitUI();
     };
   }
+
+    function updateCellBadge(r: number, c: number): void {
+    const b = $("board");
+    if (!b) return;
+
+    const cell = b.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+    if (!cell) return;
+
+    const pct = cellPickPct[r][c];
+    if (pct == null) return;
+
+    const tier = pct >= 90 ? "hot" : pct <= 10 ? "low" : "mid";
+
+    let badge = cell.querySelector(".usageBadge") as HTMLElement | null;
+
+    if (!badge) {
+      badge = document.createElement("div");
+      badge.className = "usageBadge";
+      cell.appendChild(badge);
+    }
+
+    badge.dataset.tier = tier;
+    badge.textContent = `${pct}%`;
+  }
+
 
   if (submit) {
     submit.onclick = async () => {
