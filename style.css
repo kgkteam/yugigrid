@@ -358,8 +358,8 @@ body::before{
 /* ===== % BADGE ===== */
 .usageBadge{
   position: absolute;
-  top: -2px;     /* feljebb */
-  right: -2px;   /* jobbra */
+  top: 12px;      /* ✅ beljebb (Prosk-feeling) */
+  right: 12px;    /* ✅ beljebb (fix minden cellán) */
   z-index: 3;
 
   font-size: 12px;
