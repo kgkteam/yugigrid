@@ -284,11 +284,12 @@ body::before{
 }
 
 .cell:hover{
-  transform: translateY(-2px);
+  transform: scale(1.02)
   border-color: rgba(124,92,255,.55);
   box-shadow: 0 18px 60px rgba(0,0,0,.45), var(--glowSoft);
   filter: brightness(1.02);
 }
+
 
 .picked{
   border-color: rgba(124,92,255,.72);
@@ -304,7 +305,7 @@ body::before{
 
 .name{
   font-weight: 950;
-  font-size: 14px;
+  font-size: 9px;
   line-height: 1.2;
   margin-bottom: 0;
   text-shadow: 0 10px 40px rgba(0,0,0,.40);
