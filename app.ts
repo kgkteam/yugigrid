@@ -478,30 +478,35 @@ async function pickCard(card: Card): Promise<void> {
    COMMUNITY PICKS (GLOBAL via Netlify Blobs)
    ========================= */
 
-async function recordSubmit(seedStr: string): Promise<void> {
-  const jobs: Promise<any>[] = [];
+async function recordSubmit(seedStr: string): Promise<GlobalStats> {
+  const picks: { cell: string; cardId: number }[] = [];
 
   for (let r = 0; r < 3; r++) {
     for (let c = 0; c < 3; c++) {
       const card = grid[r][c];
       if (!card) continue;
-
-      jobs.push(
-        fetch("/.netlify/functions/stats", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            seed: seedStr,
-            cell: `${r},${c}`,
-            cardId: Number(card.id),
-          }),
-        })
-      );
+      picks.push({ cell: `${r},${c}`, cardId: Number(card.id) });
     }
   }
 
-  await Promise.allSettled(jobs);
+  if (!picks.length) throw new Error("No picks to submit");
+
+  const res = await fetch("/.netlify/functions/submit", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ seed: seedStr, picks }),
+  });
+
+  const data = (await res.json().catch(() => null)) as any;
+
+  if (!res.ok) {
+    throw new Error("Submit failed: " + (data?.error || (await res.text())));
+  }
+
+  // submit.ts most: { ok:true, seed, top3, totals }
+  return data as GlobalStats;
 }
+
 
 type GlobalStats = {
   seed: string;
@@ -548,6 +553,32 @@ async function refreshCellPickPct(seedStr: string): Promise<void> {
     }
   }
 }
+
+function refreshCellPickPctFromStats(st: GlobalStats): void {
+  cellPickPct = Array.from({ length: 3 }, () => Array(3).fill(null));
+
+  const totalsByCell = st?.totals || {};
+  const top3ByCell = st?.top3 || {};
+
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      const card = grid[r][c];
+      if (!card) continue;
+
+      const k = `${r},${c}`;
+      const total = Number(totalsByCell[k] ?? 0);
+      if (!total) continue;
+
+      const arr = top3ByCell[k] || [];
+      const hit = arr.find((x) => Number(x.cardId) === Number(card.id));
+      const count = hit ? Number(hit.cnt ?? 0) : 0;
+
+      const pct = Math.round((count / total) * 1000) / 10;
+      cellPickPct[r][c] = pct;
+    }
+  }
+}
+
 
 async function openResults(seedStr: string): Promise<void> {
   const back = $("resultBack");
@@ -899,16 +930,23 @@ function bindButtons(): void {
       setStatus("✅ Showing community results (your pick will appear after refresh)");
       void openResults(currentSeedStr);
 
+      setStatus("⏳ Saving...");
+
       recordSubmit(currentSeedStr)
-        .then(async () => {
-          await refreshCellPickPct(currentSeedStr);
+        .then((st) => {
+          // ✅ saját vote-oddal friss stats
+          refreshCellPickPctFromStats(st);
           renderBoard(currentSeedStr);
+
           setStatus("✅ Saved!");
+          // ✅ results megnyitása (ha akarod)
+          void openResults(currentSeedStr); // vagy csinálunk openResultsFromStats(st)-t
         })
         .catch((e) => {
           console.error(e);
           setStatus("⚠️ Save failed (try later).");
         });
+
     };
   }
 }
