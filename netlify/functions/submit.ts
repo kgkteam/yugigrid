@@ -69,7 +69,8 @@ export async function handler(event: any) {
       select ${seed}, cell, card_id, 1
       from data
       on conflict (seed, cell, card_id)
-      do update set cnt = votes.cnt + 1
+      do update set cnt = votes.cnt + 1,
+        updated_at = now()
     `;
 
     // --- 2) Visszaadjuk a top3 + totals-t (ugyanaz a logika, mint picks.ts) ---
