@@ -8,6 +8,11 @@
   { "key":"level", "op":"eq", "value":7, "label":"Level 7" },
   { "key":"level", "op":"eq", "value":8, "label":"Level 8" },
 
+  { "key":"level", "op":"between", "value":1,"value2":2, "label":"Level 1-2" },
+  { "key":"level", "op":"between", "value":3,"value2":4, "label":"Level 3-4" },
+  { "key":"level", "op":"between", "value":5,"value2":6, "label":"Level 5-6" },
+  { "key":"level", "op":"between", "value":7,"value2":8, "label":"Level 7-8" },
+
   { "key":"monsterType", "op":"eq", "value":"WARRIOR", "label":"Warrior" },
   { "key":"monsterType", "op":"eq", "value":"SPELLCASTER", "label":"Spellcaster" },
   { "key":"monsterType", "op":"eq", "value":"FAIRY", "label":"Fairy" },
@@ -64,6 +69,66 @@
   { "key":"desc", "op":"contains", "value":"cannot", "label":"Mentions cannot" },
   { "key":"desc", "op":"contains", "value":"until", "label":"Mentions until" },
   { "key":"desc", "op":"contains", "value":"when", "label":"Mentions when" },
+  { "key":"desc", "op":"contains", "value":"Standby Phase", "label":"Mentions Standby Phase" },
+  { "key":"desc", "op":"contains", "value":"Main Phase", "label":"Mentions Main Phase" },
+  { "key":"desc", "op":"contains", "value":"End Phase", "label":"Mentions End Phase" },
+  { "key":"desc", "op":"contains", "value":"Phase", "label":"Mentions any Phase" },
+  { "key":"desc", "op":"contains", "value":"Cannot be Normal Summoned/Set", "label":"Cannot be Normal Summoned/Set" },
+  { "key":"desc", "op":"contains", "value":"You can Special Summon this card", "label":"Special Summons itself" },
+  { "key":"desc", "op":"contains", "value":";", "label":"Has a cost" },
+  { "key":"desc", "op":"contains", "value":"Face-Down", "label":"Mentions Face-Down" },
+  { "key":"desc", "op":"contains", "value":"piercing", "label":"Mentions piercing" },
+
+  { "key":"name", "op":"wordCount", "value":1, "label":"1 word card name" },
+  { "key":"name", "op":"wordCount", "value":2, "label":"2 word card name" },
+  { "key":"name", "op":"wordCount", "value":3, "label":"3 word card name" },
+  { "key":"name", "op":"wordCount", "value":4, "label":"4 word card name" },
+  { "key":"name", "op":"wordCount", "value":5, "label":"5 word card name" },
+
+  { "key":"nameLength", "op":"higher", "value":"19", "label":"Card name has 20 or more characters" },
+  { "key":"nameLength", "op":"lower", "value":"20", "label":"Card name has less than 20 characters" },
+
+  { "key":"descLength", "op":"higher", "value":"199", "label":"Card text has 200 or more characters" },
+  { "key":"descLength", "op":"lower", "value":"200", "label":"Card text has less than 200 characters" },
+  { "key":"descLength", "op":"higher", "value":"499", "label":"Card text has 500 or more characters" },
+  { "key":"descLength", "op":"lower", "value":"100", "label":"Card text has less than 100 characters" },
+
+  { "key":"ATK", "op":"lower", "value":"1001", "label":"1000 ATK or lower" },
+  { "key":"ATK", "op":"lower", "value":"2001", "label":"2000 ATK or lower" },
+  { "key":"ATK", "op":"lower", "value":"3001", "label":"3000 ATK or lower" },
+
+  { "key":"ATK", "op":"higher", "value":"999", "label":"1000 ATK or higher" },
+  { "key":"ATK", "op":"higher", "value":"1999", "label":"2000 ATK or higher" },
+  { "key":"ATK", "op":"higher", "value":"2999", "label":"3000 ATK or higher" },
+
+  { "key":"DEF", "op":"lower", "value":"1001", "label":"1000 DEF or lower" },
+  { "key":"DEF", "op":"lower", "value":"2001", "label":"2000 DEF or lower" },
+  { "key":"DEF", "op":"lower", "value":"3001", "label":"3000 DEF or lower" },
+  
+  { "key":"DEF", "op":"higher", "value":"999", "label":"1000 DEF or lower" },
+  { "key":"DEF", "op":"higher", "value":"1999", "label":"2000 DEF or lower" },
+  { "key":"DEF", "op":"higher", "value":"2999", "label":"3000 DEF or lower" },
+
+  { "key":"ATK", "op":"between", "value":"1000","value2":"2000", "label":"Has ATK between 1000-2000" },
+  { "key":"ATK", "op":"between", "value":"2000","value2":"3000", "label":"Has ATK between 2000-3000" },
+
+  { "key":"DEF", "op":"between", "value":"1000","value2":"2000", "label":"Has DEF between 1000-2000" },
+  { "key":"DEF", "op":"between", "value":"2000","value2":"3000", "label":"Has DEF between 2000-3000" },
+
+  { "key":"level", "op":"eq", "value":1, "label":"Level 1" },
+  { "key":"level", "op":"eq", "value":2, "label":"Level 2" },
+  { "key":"level", "op":"eq", "value":3, "label":"Level 3" },
+  { "key":"level", "op":"eq", "value":4, "label":"Level 4" },
+  { "key":"level", "op":"eq", "value":5, "label":"Level 5" },
+  { "key":"level", "op":"eq", "value":6, "label":"Level 6" },
+  { "key":"level", "op":"eq", "value":7, "label":"Level 7" },
+  { "key":"level", "op":"eq", "value":8, "label":"Level 8" },
+
+  { "key":"level", "op":"between", "value":1,"value2":2, "label":"Level 1-2" },
+  { "key":"level", "op":"between", "value":3,"value2":4, "label":"Level 3-4" },
+  { "key":"level", "op":"between", "value":5,"value2":6, "label":"Level 5-6" },
+  { "key":"level", "op":"between", "value":7,"value2":8, "label":"Level 7-8" },
+
 
   { "key":"level", "op":"higher", "value":4, "label":"Level 5 or higher" },
   { "key":"level", "op":"higher", "value":5, "label":"Level 6 or higher" },
@@ -82,10 +147,17 @@
   { "key":"rank", "op":"eq", "value":7, "label":"Rank 7" },
   { "key":"rank", "op":"eq", "value":8, "label":"Rank 8" },
 
-  { "key":"rank", "op":"lower", "value":4, "label":"Rank 3 or lower" },
   { "key":"rank", "op":"lower", "value":3, "label":"Rank 2 or lower" },
+  { "key":"rank", "op":"lower", "value":4, "label":"Rank 3 or lower" },
+  { "key":"rank", "op":"lower", "value":5, "label":"Rank 4 or lower" },
+  { "key":"rank", "op":"higher", "value":3, "label":"Rank 4 or higher" },
   { "key":"rank", "op":"higher", "value":4, "label":"Rank 5 or higher" },
   { "key":"rank", "op":"higher", "value":5, "label":"Rank 6 or higher" },
+
+  { "key":"rank", "op":"between", "value":1,"value2":2, "label":"Level 1-2" },
+  { "key":"rank", "op":"between", "value":3,"value2":4, "label":"Level 3-4" },
+  { "key":"rank", "op":"between", "value":5,"value2":6, "label":"Level 5-6" },
+  { "key":"rank", "op":"between", "value":7,"value2":8, "label":"Level 7-8" },
 
   { "key":"linkRating", "op":"eq", "value":1, "label":"Link 1" },
   { "key":"linkRating", "op":"eq", "value":2, "label":"Link 2" },
@@ -120,6 +192,14 @@
   { "key":"ritual", "op":"eq", "value":true, "label":"Ritual Monster" },
   { "key":"pendulum", "op":"eq", "value":true, "label":"Pendulum Monster" },
 
-  { "key":"flip", "op":"eq", "value":true, "label":"Flip Monster" }
+  { "key":"flip", "op":"eq", "value":true, "label":"Flip Monster" },
+
+  { "key":"setYear", "op":"lowerEq", "value":2005, "label":"Printed before 2005" },
+  { "key":"setYear", "op":"between", "value":2005, "value2": 2015, "label":"Printed between 2005-2015" },
+  { "key":"setYear", "op":"higherEq", "value":2015, "label":"Printed after 2015" },
+
+  { "key":"firstSetYear", "op":"lowerEq", "value":2005, "label":"First Print before 2005" },
+  { "key":"firstSetYear", "op":"between", "value":2005, "value2":2020, "label":"First Print between 2005-2020" },
+  { "key":"firstSetYear", "op":"higherEq", "value":2020, "label":"First Print after 2020" }
 
 ]

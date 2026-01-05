@@ -12,6 +12,9 @@ import {
   type Rule,
 } from "./engine";
 
+import { getSetYearByCode } from "./src/setYear";
+
+
 /* =========================
    IndexedDB cache (large)
    ========================= */
@@ -691,9 +694,14 @@ type YgoApiCard = Record<string, unknown> & {
   level?: number;
   rank?: number;
   linkval?: number;
-  linkRating?: number;
   typeline?: string[];
+
+  misc_info?: Array<{ tcg_date?: string; ocg_date?: string }>;
+
+  card_sets?: Array<{ set_code: string }>; // ✅ EZ KELL
 };
+
+
 
 async function loadCards(): Promise<YgoApiCard[]> {
   setStatus("Loading cards (API)...");
@@ -711,7 +719,7 @@ async function loadCards(): Promise<YgoApiCard[]> {
   }
 
   setStatus("Downloading cards (first time can be slow)...");
-  const url = "https://db.ygoprodeck.com/api/v7/cardinfo.php";
+  const url = "https://db.ygoprodeck.com/api/v7/cardinfo.php?cardset=yes&misc=yes";
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error("YGOPRODeck API error");
   const json = (await res.json()) as { data?: unknown };
@@ -748,7 +756,8 @@ function normalizeCard(raw: YgoApiCard): Card {
       .replace(/[^A-Z0-9_]/g, "");
 
   const hasTL = (word: string) =>
-    Array.isArray(raw.typeline) && raw.typeline.some((t) => String(t).toLowerCase() === word.toLowerCase());
+    Array.isArray(raw.typeline) &&
+    raw.typeline.some((t) => String(t).toLowerCase() === word.toLowerCase());
 
   const isXyz = hasTL("Xyz");
   const isFusion = hasTL("Fusion");
@@ -795,6 +804,17 @@ function normalizeCard(raw: YgoApiCard): Card {
     return tags.join(" • ");
   })();
 
+  // ✅ több setből jövő évlista (unique + rendezett)
+  const setYears = Array.from(
+    new Set(
+      (raw.card_sets ?? [])
+        .map((s) => s?.set_code)
+        .filter(Boolean)
+        .map((sc) => getSetYearByCode(String(sc)))
+        .filter((y): y is number => typeof y === "number" && Number.isFinite(y))
+    )
+  ).sort((a, b) => a - b);
+
   return {
     id: raw.id,
     name: raw.name,
@@ -831,8 +851,11 @@ function normalizeCard(raw: YgoApiCard): Card {
 
     meta,
     info,
+
+    setYears, // ✅ EZ A FIX (engine a card.setYears-t nézi)
   };
 }
+
 
 /* =========================
    UI wiring
@@ -1031,8 +1054,14 @@ async function init(): Promise<void> {
 
 init().catch((e) => {
   console.error(e);
-  alert("Error during init. Check the console.");
+  const msg =
+    (e as any)?.message ||
+    (e as any)?.toString?.() ||
+    "Unknown error";
+  const stack = (e as any)?.stack ? `\n\n${(e as any).stack}` : "";
+  alert(`Error during init:\n${msg}${stack}`);
 });
+
 
 /* =========================
    DEBUG ONLY

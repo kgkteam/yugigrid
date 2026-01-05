@@ -1,11 +1,13 @@
 // engine.ts — pure logic, no UI
+import { DEBUG_RULES_ENABLED, DEBUG_RULES } from "./debugRules";
+import { getSetYearByCode } from "./src/setYear";
 
 export type RNG = () => number;
 
 export type RuleOp =
   | "eq" | "neq"
   | "lower" | "higher" | "lowerEq" | "higherEq"
-  | "contains";
+  | "contains" | "between" | "wordCount" ;
 
 export type RuleKey =
   | "all" | "any"
@@ -14,7 +16,7 @@ export type RuleKey =
   | "spellType" | "trapType" | "kind"
   | "attribute" | "tuner" | "effect" | "ritual" | "pendulum" | "flip"
   | "xyz" | "fusion" | "synchro" | "link"
-  | "desc"
+  | "desc" | "setYear" | "firstSetYear"
   | string;
 
 export interface Rule {
@@ -37,6 +39,8 @@ export interface Card {
   race?: string | null;
   attribute?: string | null;
   monsterType?: string | null;
+  atk?: number | null;
+  def?:number | null
 
   level?: number | null;
   rank?: number | null;
@@ -62,6 +66,8 @@ export interface Card {
 
   meta?: string;
   info?: string;
+  setYears?: number[];
+
 
   // allow extra keys
   [k: string]: unknown;
@@ -138,14 +144,13 @@ export function getSystemDayLabel(): string {
   }
   return "Day";
 }
+function isSpellOrTrap(card: Card | null | undefined): boolean {
+  return card?.type === "Spell Card" || card?.type === "Trap Card";
+}
 
 /* =========================
    MATCHING
    ========================= */
-
-function isSpellOrTrap(card: Card | null | undefined): boolean {
-  return card?.type === "Spell Card" || card?.type === "Trap Card";
-}
 
 export function matches(card: Card, rule: Rule): boolean {
   if (!rule) return false;
@@ -153,17 +158,14 @@ export function matches(card: Card, rule: Rule): boolean {
   let v: unknown;
 
   switch (rule.key) {
-    // ✅ FIX: Level rule csak LEVEL-t néz (nem rank, nem link)
     case "level":
       v = card?.level;
       break;
 
-    // ✅ Rank rule csak RANK-t néz
     case "rank":
       v = card?.rank;
       break;
 
-    // ✅ Link rule csak LINKRATING-et néz
     case "linkRating":
       v = card?.linkRating;
       break;
@@ -181,6 +183,34 @@ export function matches(card: Card, rule: Rule): boolean {
       v = card?.race;
       break;
 
+    case "nameLength":
+      v = card?.name.length;
+      break;
+
+    case "descLength":
+      v = card?.desc.length;
+      break;
+
+    case "ATK":
+      v = card?.atk;
+      break;
+
+    case "DEF":
+      v = card?.def;
+      break;
+
+    case "setYear":
+      v = (card as any)?.setYears ?? null;
+      break;
+
+    case "firstSetYear": {
+      const ys = (card as any)?.setYears;
+      v = Array.isArray(ys) && ys.length ? ys[0] : null;
+      break;
+    }
+
+
+
     default:
       v = (card as Record<string, unknown>)[String(rule.key)];
   }
@@ -191,6 +221,33 @@ export function matches(card: Card, rule: Rule): boolean {
   const value = rule.value;
   const value2 = rule.value2;
 
+  // ✅ setYear (setYears): elég ha BÁRMELYIK év passzol
+  if (Array.isArray(v)) {
+    const years = v as number[];
+
+    return years.some((year) => {
+      if (op === "eq") return year === value;
+      if (op === "neq") return year !== value;
+
+      if (op === "lower") return typeof value === "number" && year < value;
+      if (op === "higher") return typeof value === "number" && year > value;
+      if (op === "lowerEq") return typeof value === "number" && year <= value;
+      if (op === "higherEq") return typeof value === "number" && year >= value;
+
+      if (op === "between") {
+        return (
+          typeof value === "number" &&
+          typeof value2 === "number" &&
+          year >= value &&
+          year <= value2
+        );
+      }
+
+      return false;
+    });
+  }
+
+  // ✅ innentől a “normál” (nem tömb) mezők
   if (op === "eq") return v === value;
   if (op === "neq") return v !== value;
 
@@ -198,6 +255,18 @@ export function matches(card: Card, rule: Rule): boolean {
   if (op === "higher") return typeof v === "number" && typeof value === "number" && v > value;
   if (op === "lowerEq") return typeof v === "number" && typeof value === "number" && v <= value;
   if (op === "higherEq") return typeof v === "number" && typeof value === "number" && v >= value;
+
+  if (op === "between") {
+    return (
+      typeof v === "number" &&
+      typeof value === "number" &&
+      typeof value2 === "number" &&
+      v >= value &&
+      v <= value2
+    );
+  }
+
+  if (op === "wordCount") return typeof v === "string" && v.split(" ").length === value;
 
   if (op === "contains") {
     if (typeof v !== "string") return false;
@@ -209,6 +278,7 @@ export function matches(card: Card, rule: Rule): boolean {
 
   return false;
 }
+
 
 export function matchesCell(card: Card, rowRule: Rule, colRule: Rule): boolean {
   return matches(card, rowRule) && matches(card, colRule);
@@ -245,6 +315,7 @@ export function recomputeAllCellCounts(
 }
 
 export function pickRules(rand: RNG, pool: Rule[], n: number): Rule[] {
+
   const idxs = pool.map((_, i) => i);
   for (let i = idxs.length - 1; i > 0; i--) {
     const j = Math.floor(rand() * (i + 1));
@@ -320,6 +391,15 @@ function rulesCompatibleSimple(a: Rule, b: Rule): boolean {
   if (isTypeRule(a, "Link Monster") && (b.key === "level" || b.key === "rank")) return false;
   if (isTypeRule(b, "Link Monster") && (a.key === "level" || a.key === "rank")) return false;
 
+    // setYear vs firstSetYear: ne ütközzenek ugyanabban a cellában
+  if (a.key === "setYear" && b.key === "firstSetYear") return false;
+  if (a.key === "firstSetYear" && b.key === "setYear") return false;
+
+  // és ugyanaz a kulcs se legyen egyszerre
+  if (a.key === "firstSetYear" && b.key === "firstSetYear") return false;
+  if (a.key === "setYear" && b.key === "setYear") return false;
+
+
   return true;
 }
 
@@ -384,6 +464,21 @@ export function pickNonColliding({
   maxTries = 8000,
 }: PickNonCollidingOpts): PickNonCollidingResult {
   for (let tries = 0; tries < maxTries; tries++) {
+
+    const isLocalhost =
+    typeof location !== "undefined" &&
+    (location.hostname === "localhost" || location.hostname === "127.0.0.1");
+
+  // ✅ csak localban engedjük, deployban véletlen se
+    if (DEBUG_RULES_ENABLED && isLocalhost) {
+    return {
+      rows: DEBUG_RULES.rows,
+      cols: DEBUG_RULES.cols,
+      cellCounts: recomputeAllCellCounts(activeCards, DEBUG_RULES.rows, DEBUG_RULES.cols),
+        tries,
+    };
+  }
+
     const rows = pickRules(rand, poolRows, 3);
     const cols = pickRules(rand, poolCols, 3);
 
