@@ -13,8 +13,8 @@ export const DEBUG_RULES: { rows: Rule[]; cols: Rule[] } = {
     { "key":"attribute", "op":"eq", "value":"WIND", "label":"Wind Monster" },
   ],
   cols: [
-    { "key":"firstSetYear", "op":"lowerEq", "value":2005, "label":"First Print before 2005" },
-    { "key":"firstSetYear", "op":"between", "value":2005, "value2":2020, "label":"First Print between 2005-2020" },
-    { "key":"firstSetYear", "op":"higherEq", "value":2020, "label":"First Print after 2020" }
+    { "key":"ritual", "op":"eq", "value":true, "label":"Ritual Monster" },
+    { "key":"desc", "op":"contains", "value":"●", "label":"Has a multiple choice effect" },
+    { "key":"name", "op":"special", "value":true, "label":"Has a non-letter character in the card name" },
   ],
-};
+}

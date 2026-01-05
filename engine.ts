@@ -23,7 +23,7 @@ export function dateSeed(): SeedObj {
 export type RuleOp =
   | "eq" | "neq"
   | "lower" | "higher" | "lowerEq" | "higherEq"
-  | "contains" | "between" | "wordCount" ;
+  | "contains" | "between" | "wordCount" | "special" ;
 
 export type RuleKey =
   | "all" | "any"
@@ -77,6 +77,7 @@ export interface Card {
   ritual?: boolean;
   pendulum?: boolean;
   tuner?: boolean;
+  flip?: boolean;
 
   effect?: boolean | null;
   normal?: boolean | null;
@@ -298,6 +299,8 @@ export function matches(card: Card, rule: Rule): boolean {
   }
 
   if (op === "wordCount") return typeof v === "string" && v.split(" ").length === value;
+
+  if (op === "special") return typeof v === "string" && /[^a-zA-Z\s]/.test(v);
 
   if (op === "contains") {
     if (typeof v !== "string") return false;

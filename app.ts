@@ -806,6 +806,7 @@ function normalizeCard(raw: YgoApiCard): Card {
   const isRitual = hasTL("Ritual");
   const isPendulum = hasTL("Pendulum");
   const isTuner = hasTL("Tuner");
+  const isFlip = hasTL("Flip");
 
   let level: number | null = (raw as any).level ?? null;
   let rank: number | null = (raw as any).rank ?? null;
@@ -841,6 +842,7 @@ function normalizeCard(raw: YgoApiCard): Card {
     if (isPendulum) tags.push("Pendulum");
     if (isRitual) tags.push("Ritual");
     if (isTuner) tags.push("Tuner");
+    if (isFlip) tags.push("Flip");
     return tags.join(" • ");
   })();
 
@@ -896,6 +898,7 @@ function normalizeCard(raw: YgoApiCard): Card {
     ritual: isRitual,
     pendulum: isPendulum,
     tuner: isTuner,
+    flip: isFlip,
 
     effect: isMonster ? isEffectMonster : null,
     normal: isMonster ? isNormalMonster : null,

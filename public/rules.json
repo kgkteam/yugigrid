@@ -78,7 +78,11 @@
   { "key":"desc", "op":"contains", "value":";", "label":"Has a cost" },
   { "key":"desc", "op":"contains", "value":"Face-Down", "label":"Mentions Face-Down" },
   { "key":"desc", "op":"contains", "value":"piercing", "label":"Mentions piercing" },
+  { "key":"desc", "op":"contains", "value":"●", "label":"Has a multiple choice effect" },
+  { "key":"desc", "op":"contains", "value":"Token", "label":"Mentions Token" },
 
+  { "key":"name", "op":"special", "value":true, "label":"Has a non-letter character in the card name" },
+  
   { "key":"name", "op":"wordCount", "value":1, "label":"1 word card name" },
   { "key":"name", "op":"wordCount", "value":2, "label":"2 word card name" },
   { "key":"name", "op":"wordCount", "value":3, "label":"3 word card name" },
@@ -191,8 +195,8 @@
 
   { "key":"ritual", "op":"eq", "value":true, "label":"Ritual Monster" },
   { "key":"pendulum", "op":"eq", "value":true, "label":"Pendulum Monster" },
-
   { "key":"flip", "op":"eq", "value":true, "label":"Flip Monster" },
+
 
   { "key":"setYear", "op":"lowerEq", "value":2005, "label":"Printed before 2005" },
   { "key":"setYear", "op":"between", "value":2005, "value2": 2015, "label":"Printed between 2005-2015" },
@@ -205,7 +209,8 @@
   { "key":"hasRarity", "op":"contains", "value":"Common", "label":"Has Common print" },
   { "key":"hasRarity", "op":"contains", "value":"Super Rare", "label":"Has Super Rare print" },
   { "key":"hasRarity", "op":"contains", "value":"Ultra Rare", "label":"Has Ultra Rare print" }
-  
 
+
+  
 
 ]
