@@ -89,6 +89,8 @@ let CARDS: Card[] = [];
 let CARD_BY_ID: Map<string, Card> = new Map();
 let ACTIVE_CARDS: Card[] = [];
 
+let currentSeedStr = "";
+
 // ✅ day flag (Spell&Trap vs Monster)
 let DAY_IS_SPELLTRAP = false;
 
@@ -401,10 +403,9 @@ function shakeCell(r: number, c: number): void {
   if (!cell) return;
 
   cell.classList.remove("shake");
-  void cell.offsetWidth;      // force reflow, hogy újrainduljon
+  void cell.offsetWidth; // force reflow
   cell.classList.add("shake");
 
-  // fontos: vedd is le, hogy a következő hibánál újra menjen
   window.setTimeout(() => {
     cell.classList.remove("shake");
   }, 380);
@@ -422,8 +423,6 @@ function findCardInGrid(cardId: number | string): { r: number; c: number } | nul
   return null;
 }
 
-let currentSeedStr = "";
-
 async function pickCard(card: Card): Promise<void> {
   if (!activeCell) return;
 
@@ -438,43 +437,77 @@ async function pickCard(card: Card): Promise<void> {
   const rowRule = rowRules[r];
   const colRule = colRules[c];
 
+  const prev = findCardInGrid(card.id); // ha már le volt rakva, hol van?
+  const targetHadCard = !!grid[r][c];   // cél foglalt?
   const ok = matchesCell(card, rowRule, colRule);
 
-  // 🔁 ha ez a kártya már máshol van → vegyük ki onnan
-  const prev = findCardInGrid(card.id);
-  if (prev && (prev.r !== r || prev.c !== c)) {
+  // ✅ ha ugyanarra a cellára "pickelsz" ugyanazzal a lappal → ne csináljunk semmit
+  if (prev && prev.r === r && prev.c === c) {
+    closePicker();
+    return;
+  }
+
+  // ❌ NEM OK eset
+  if (!ok) {
+    // ✅ ha egy másik cellából akarsz átírni egy FOGLALT cellába:
+    // ürüljön mindkettő, és a cél legyen piros
+    if (prev && (prev.r !== r || prev.c !== c) && targetHadCard) {
+      // forrás ürítés
       grid[prev.r][prev.c] = null;
       wrong[prev.r][prev.c] = false;
       cellPickPct[prev.r][prev.c] = null;
+
+      // cél ürítés + piros
+      grid[r][c] = null;
+      wrong[r][c] = true;
+      cellPickPct[r][c] = null;
+
+      closePicker();
+      renderBoard(currentSeedStr);
+      tick();
+
+      mistakes++;
+      requestAnimationFrame(() => shakeCell(r, c));
+      return;
+    }
+
+    // ✅ minden más rossz próbálkozás (üres cél / nem áthúzás / stb.)
+    wrong[r][c] = true;
+    cellPickPct[r][c] = null;
+
+    closePicker();
+    renderBoard(currentSeedStr);
+    tick();
+
+    mistakes++;
+    requestAnimationFrame(() => shakeCell(r, c));
+    return;
   }
 
-  // ✅ most rakjuk be az új helyre
-  if (ok) {
-    grid[r][c] = card;
+  // ✅ OK eset: mehet az átrakás
+  // Ha volt korábban máshol → forrást ürítjük
+  if (prev && (prev.r !== r || prev.c !== c)) {
+    grid[prev.r][prev.c] = null;
+    wrong[prev.r][prev.c] = false;
+    cellPickPct[prev.r][prev.c] = null;
   }
-  wrong[r][c] = !ok;
 
-  // először nullázunk, hogy ne legyen félrevezető régi adat
+  // Cél cellába berakjuk (ha volt benne lap, azt felülírjuk)
+  grid[r][c] = card;
+  wrong[r][c] = false;
   cellPickPct[r][c] = null;
 
   closePicker();
-  renderBoard(currentSeedStr); // ⬅️ ELŐBB kirajzoljuk az új cellát
+  renderBoard(currentSeedStr);
   tick();
 
-  if (!ok) {
-    mistakes++;
-    // ⬅️ UTÁNA rázzuk meg (DOM már létezik)
-    requestAnimationFrame(() => shakeCell(r, c));
-  }
-
   // ✅ frissítjük a %-okat (ha van global adat)
-  // ✅ frissítjük a %-okat (ha van global adat) — NINCS full rerender, nincs blink
   refreshCellPickPct(currentSeedStr)
     .then(() => {
       updateCellBadge(r, c);
+      if (prev) updateCellBadge(prev.r, prev.c);
     })
     .catch(() => {});
-
 }
 
 /* =========================
@@ -698,7 +731,14 @@ type YgoApiCard = Record<string, unknown> & {
 
   misc_info?: Array<{ tcg_date?: string; ocg_date?: string }>;
 
-  card_sets?: Array<{ set_code: string }>; // ✅ EZ KELL
+  card_sets?: Array<{
+  set_name?: string;
+  set_code: string;
+  set_rarity?: string;
+  set_rarity_code?: string;
+  set_price?: string;
+}>;
+
 };
 
 
@@ -719,7 +759,7 @@ async function loadCards(): Promise<YgoApiCard[]> {
   }
 
   setStatus("Downloading cards (first time can be slow)...");
-  const url = "https://db.ygoprodeck.com/api/v7/cardinfo.php?cardset=yes&misc=yes";
+  const url = "https://db.ygoprodeck.com/api/v7/cardinfo.php?misc=yes";
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error("YGOPRODeck API error");
   const json = (await res.json()) as { data?: unknown };
@@ -756,8 +796,8 @@ function normalizeCard(raw: YgoApiCard): Card {
       .replace(/[^A-Z0-9_]/g, "");
 
   const hasTL = (word: string) =>
-    Array.isArray(raw.typeline) &&
-    raw.typeline.some((t) => String(t).toLowerCase() === word.toLowerCase());
+    Array.isArray((raw as any).typeline) &&
+    (raw as any).typeline.some((t: any) => String(t).toLowerCase() === word.toLowerCase());
 
   const isXyz = hasTL("Xyz");
   const isFusion = hasTL("Fusion");
@@ -767,8 +807,8 @@ function normalizeCard(raw: YgoApiCard): Card {
   const isPendulum = hasTL("Pendulum");
   const isTuner = hasTL("Tuner");
 
-  let level: number | null = (raw.level as number | undefined) ?? null;
-  let rank: number | null = (raw.rank as number | undefined) ?? null;
+  let level: number | null = (raw as any).level ?? null;
+  let rank: number | null = (raw as any).rank ?? null;
 
   if (isXyz && rank == null && level != null) {
     rank = level;
@@ -779,15 +819,15 @@ function normalizeCard(raw: YgoApiCard): Card {
   const mainDeck = !extraDeck;
 
   const meta = (() => {
-    if (isSpell) return `Spell • ${raw.race}`.trim();
-    if (isTrap) return `Trap • ${raw.race}`.trim();
+    if (isSpell) return `Spell • ${(raw as any).race}`.trim();
+    if (isTrap) return `Trap • ${(raw as any).race}`.trim();
 
     const bits: string[] = [];
-    if (raw.attribute) bits.push(String(raw.attribute));
-    if (raw.race) bits.push(String(raw.race));
+    if ((raw as any).attribute) bits.push(String((raw as any).attribute));
+    if ((raw as any).race) bits.push(String((raw as any).race));
     if (level != null) bits.push(`Lv ${level}`);
     if (rank != null) bits.push(`Rank ${rank}`);
-    if (raw.linkval != null) bits.push(`Link ${raw.linkval}`);
+    if ((raw as any).linkval != null) bits.push(`Link ${(raw as any).linkval}`);
     return bits.join(" • ");
   })();
 
@@ -807,7 +847,7 @@ function normalizeCard(raw: YgoApiCard): Card {
   // ✅ több setből jövő évlista (unique + rendezett)
   const setYears = Array.from(
     new Set(
-      (raw.card_sets ?? [])
+      (((raw as any).card_sets ?? []) as any[])
         .map((s) => s?.set_code)
         .filter(Boolean)
         .map((sc) => getSetYearByCode(String(sc)))
@@ -815,21 +855,39 @@ function normalizeCard(raw: YgoApiCard): Card {
     )
   ).sort((a, b) => a - b);
 
+  // ✅ ATK/DEF: kezeljük a stringet is + Link DEF = 0
+  const parseStat = (v: any): number | null => {
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+    if (typeof v === "string") {
+      const s = v.trim();
+      if (!s || s === "?" || s === "-") return null;
+      const n = Number(s);
+      return Number.isFinite(n) ? n : null;
+    }
+    return null;
+  };
+
+  const atk = isMonster ? parseStat((raw as any).atk) : null;
+  const def = isMonster ? (isLink ? 0 : parseStat((raw as any).def)) : null;
+
   return {
-    id: raw.id,
-    name: raw.name,
-    desc: String(raw.desc || ""),
+    id: (raw as any).id,
+    name: (raw as any).name,
+    desc: String((raw as any).desc || ""),
 
     type,
-    race: raw.race,
+    race: (raw as any).race ?? null,
 
-    attribute: raw.attribute ? toEnum(raw.attribute) : null,
-    monsterType: raw.race && !isSpell && !isTrap ? toEnum(raw.race) : null,
+    attribute: (raw as any).attribute ? toEnum((raw as any).attribute) : null,
+    monsterType: (raw as any).race && !isSpell && !isTrap ? toEnum((raw as any).race) : null,
+
+    atk,
+    def,
 
     level,
     rank,
 
-    linkRating: (raw.linkval as number | undefined) ?? null,
+    linkRating: typeof (raw as any).linkval === "number" ? ((raw as any).linkval as number) : null,
 
     xyz: isXyz,
     fusion: isFusion,
@@ -843,8 +901,11 @@ function normalizeCard(raw: YgoApiCard): Card {
     normal: isMonster ? isNormalMonster : null,
 
     kind: isSpell ? "spell" : isTrap ? "trap" : "monster",
-    spellType: isSpell ? (raw.race ? toEnum(raw.race) : null) : null,
-    trapType: isTrap ? (raw.race ? toEnum(raw.race) : null) : null,
+    spellType: isSpell ? ((raw as any).race ? toEnum((raw as any).race) : null) : null,
+    trapType: isTrap ? ((raw as any).race ? toEnum((raw as any).race) : null) : null,
+
+    // ✅ rarity print-ekhez
+    card_sets: (raw as any).card_sets,
 
     extraDeck,
     mainDeck,
@@ -852,7 +913,7 @@ function normalizeCard(raw: YgoApiCard): Card {
     meta,
     info,
 
-    setYears, // ✅ EZ A FIX (engine a card.setYears-t nézi)
+    setYears,
   };
 }
 
@@ -975,95 +1036,6 @@ function bindButtons(): void {
 }
 
 /* =========================
-   INIT
-   ========================= */
-
-async function init(): Promise<void> {
-  if (location.search || location.hash) {
-    history.replaceState(null, "", location.pathname);
-  }
-
-  const seedObj = dateSeed();
-  const seedStr = seedObj.s;
-  currentSeedStr = seedStr;
-
-  bindButtons();
-
-  RULE_POOL = await loadRules();
-
-  const rawCards = await loadCards();
-  CARDS = rawCards.map(normalizeCard);
-  CARD_BY_ID = new Map(CARDS.map((c) => [String(c.id), c]));
-
-  console.log("CARDS LOADED:", CARDS.length);
-
-  const base = (Number(seedStr) || 123456) >>> 0;
-  const pools = buildRulePools(RULE_POOL);
-  const rand = mulberry32(base);
-
-  const isSpellTrap = rand() < 0.2;
-  renderDayType(isSpellTrap);
-  DAY_IS_SPELLTRAP = isSpellTrap;
-
-  const pool = isSpellTrap ? pools.spellTrapPool : pools.monsterPool;
-
-  const generationCards = CARDS.filter((card) => {
-    if (isSpellTrap) return card.kind !== "monster";
-    return card.kind === "monster";
-  });
-
-  let picked: { rows: Rule[]; cols: Rule[]; cellCounts: number[][] } | null = null;
-
-  try {
-    const res = await pickNonCollidingAsync({
-      rand,
-      poolRows: pool,
-      poolCols: pool,
-      activeCards: generationCards,
-      minSolutionsPerCell: MIN_SOLUTIONS_PER_CELL,
-      maxTries: 12000,
-    });
-    picked = { rows: res.rows, cols: res.cols, cellCounts: res.cellCounts };
-  } catch (e) {
-    console.error(e);
-  }
-
-  if (!picked) {
-    alert(
-      "Nem sikerült táblát generálni a jelenlegi feltételekkel.\n" +
-        "Tipp: csökkentsd MIN_SOLUTIONS_PER_CELL értékét (pl. 10 → 5)."
-    );
-    setStatus("❌ Nem sikerült táblát generálni.");
-    return;
-  }
-
-  rowRules = picked.rows;
-  colRules = picked.cols;
-  cellSolutionCounts = picked.cellCounts;
-
-  renderRules(seedStr);
-  renderBoard(seedStr);
-
-  startTs = Date.now();
-  tick();
-  setStatus("");
-
-  hasSubmitted = false;
-  updateSubmitUI();
-}
-
-init().catch((e) => {
-  console.error(e);
-  const msg =
-    (e as any)?.message ||
-    (e as any)?.toString?.() ||
-    "Unknown error";
-  const stack = (e as any)?.stack ? `\n\n${(e as any).stack}` : "";
-  alert(`Error during init:\n${msg}${stack}`);
-});
-
-
-/* =========================
    DEBUG ONLY
    ========================= */
 
@@ -1094,5 +1066,76 @@ window.__YG_DEBUG__ = {
 
 setInterval(tick, 250);
 window.__YG_CLEAR_CACHE__ = clearCardsCache;
+
+
+/* =========================
+   INIT
+   ========================= */
+
+async function init(): Promise<void> {
+  const seedObj = dateSeed();
+  const seedStr = seedObj.s;
+  currentSeedStr = seedStr;
+
+  bindButtons();
+
+  RULE_POOL = await loadRules();
+
+  const rawCards = await loadCards();
+  CARDS = rawCards.map(normalizeCard);
+  CARD_BY_ID = new Map(CARDS.map((c) => [String(c.id), c]));
+
+  console.log("CARDS LOADED:", CARDS.length);
+
+  const base = (Number(seedStr) || 123456) >>> 0;
+  const pools = buildRulePools(RULE_POOL);
+  const rand = mulberry32(base);
+
+  // ideiglenesen maradhat random, de legalább létezzen
+  const isSpellTrap = rand() < 0.2;
+  DAY_IS_SPELLTRAP = isSpellTrap;
+  renderDayType(isSpellTrap);
+
+  const pool = isSpellTrap ? pools.spellTrapPool : pools.monsterPool;
+
+  const generationCards = CARDS.filter((card) => {
+    if (isSpellTrap) return card.kind !== "monster";
+    return card.kind === "monster";
+  });
+
+  // ===== DEBUG LOGS =====
+  console.log("ATK>=3000:", generationCards.filter(c => typeof c.atk==="number" && (c.atk as number) >= 3000).length);
+  console.log("DEF 2000-3000:", generationCards.filter(c => typeof c.def==="number" && (c.def as number) >= 2000 && (c.def as number) <= 3000).length);
+
+  console.log("link count:", generationCards.filter(c => c.link === true).length);
+  console.log("DAY_IS_SPELLTRAP:", isSpellTrap);
+  console.log("generationCards length:", generationCards.length);
+  console.log("sample generationCard:", generationCards[0]);
+  console.log("Link flagged count:", generationCards.filter(c => c.link === true).length);
+  console.log("Link typeline count:", generationCards.filter(c => c.info?.includes("Link")).length);
+
+  // ======================
+
+  const res = await pickNonCollidingAsync({
+    rand,
+    poolRows: pool,
+    poolCols: pool,
+    activeCards: generationCards,
+    minSolutionsPerCell: MIN_SOLUTIONS_PER_CELL,
+    maxTries: 12000,
+  });
+
+  rowRules = res.rows;
+  colRules = res.cols;
+  cellSolutionCounts = res.cellCounts;
+
+  renderRules(seedStr);
+  renderBoard(seedStr);
+  startTs = Date.now();
+  tick();
+}
+
+init().catch((e) => console.error(e));
+
 
 export {};

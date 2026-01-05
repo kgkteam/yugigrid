@@ -85,35 +85,35 @@
   { "key":"name", "op":"wordCount", "value":4, "label":"4 word card name" },
   { "key":"name", "op":"wordCount", "value":5, "label":"5 word card name" },
 
-  { "key":"nameLength", "op":"higher", "value":"19", "label":"Card name has 20 or more characters" },
-  { "key":"nameLength", "op":"lower", "value":"20", "label":"Card name has less than 20 characters" },
+  { "key":"nameLength", "op":"higher", "value":19, "label":"Card name has 20 or more characters" },
+  { "key":"nameLength", "op":"lower", "value":20, "label":"Card name has less than 20 characters" },
 
-  { "key":"descLength", "op":"higher", "value":"199", "label":"Card text has 200 or more characters" },
-  { "key":"descLength", "op":"lower", "value":"200", "label":"Card text has less than 200 characters" },
-  { "key":"descLength", "op":"higher", "value":"499", "label":"Card text has 500 or more characters" },
-  { "key":"descLength", "op":"lower", "value":"100", "label":"Card text has less than 100 characters" },
+  { "key":"descLength", "op":"higher", "value":199, "label":"Card text has 200 or more characters" },
+  { "key":"descLength", "op":"lower", "value":200, "label":"Card text has less than 200 characters" },
+  { "key":"descLength", "op":"higher", "value":499, "label":"Card text has 500 or more characters" },
+  { "key":"descLength", "op":"lower", "value":100, "label":"Card text has less than 100 characters" },
 
-  { "key":"ATK", "op":"lower", "value":"1001", "label":"1000 ATK or lower" },
-  { "key":"ATK", "op":"lower", "value":"2001", "label":"2000 ATK or lower" },
-  { "key":"ATK", "op":"lower", "value":"3001", "label":"3000 ATK or lower" },
+  { "key":"ATK", "op":"lower", "value":1001, "label":"1000 ATK or lower" },
+  { "key":"ATK", "op":"lower", "value":2001, "label":"2000 ATK or lower" },
+  { "key":"ATK", "op":"lower", "value":3001, "label":"3000 ATK or lower" },
 
-  { "key":"ATK", "op":"higher", "value":"999", "label":"1000 ATK or higher" },
-  { "key":"ATK", "op":"higher", "value":"1999", "label":"2000 ATK or higher" },
-  { "key":"ATK", "op":"higher", "value":"2999", "label":"3000 ATK or higher" },
+  { "key":"ATK", "op":"higher", "value":999, "label":"1000 ATK or higher" },
+  { "key":"ATK", "op":"higher", "value":1999, "label":"2000 ATK or higher" },
+  { "key":"ATK", "op":"higher", "value":2999, "label":"3000 ATK or higher" },
 
-  { "key":"DEF", "op":"lower", "value":"1001", "label":"1000 DEF or lower" },
-  { "key":"DEF", "op":"lower", "value":"2001", "label":"2000 DEF or lower" },
-  { "key":"DEF", "op":"lower", "value":"3001", "label":"3000 DEF or lower" },
+  { "key":"DEF", "op":"lower", "value":1001, "label":"1000 DEF or lower" },
+  { "key":"DEF", "op":"lower", "value":2001, "label":"2000 DEF or lower" },
+  { "key":"DEF", "op":"lower", "value":3001, "label":"3000 DEF or lower" },
   
-  { "key":"DEF", "op":"higher", "value":"999", "label":"1000 DEF or lower" },
-  { "key":"DEF", "op":"higher", "value":"1999", "label":"2000 DEF or lower" },
-  { "key":"DEF", "op":"higher", "value":"2999", "label":"3000 DEF or lower" },
+  { "key":"DEF", "op":"higher", "value":999, "label":"1000 DEF or lower" },
+  { "key":"DEF", "op":"higher", "value":1999, "label":"2000 DEF or lower" },
+  { "key":"DEF", "op":"higher", "value":2999, "label":"3000 DEF or lower" },
 
-  { "key":"ATK", "op":"between", "value":"1000","value2":"2000", "label":"Has ATK between 1000-2000" },
-  { "key":"ATK", "op":"between", "value":"2000","value2":"3000", "label":"Has ATK between 2000-3000" },
+  { "key":"ATK", "op":"between", "value":1000,"value2":2000, "label":"Has ATK between 1000-2000" },
+  { "key":"ATK", "op":"between", "value":2000,"value2":3000, "label":"Has ATK between 2000-3000" },
 
-  { "key":"DEF", "op":"between", "value":"1000","value2":"2000", "label":"Has DEF between 1000-2000" },
-  { "key":"DEF", "op":"between", "value":"2000","value2":"3000", "label":"Has DEF between 2000-3000" },
+  { "key":"DEF", "op":"between", "value":1000,"value2":2000, "label":"Has DEF between 1000-2000" },
+  { "key":"DEF", "op":"between", "value":2000,"value2":3000, "label":"Has DEF between 2000-3000" },
 
   { "key":"level", "op":"eq", "value":1, "label":"Level 1" },
   { "key":"level", "op":"eq", "value":2, "label":"Level 2" },
@@ -180,10 +180,10 @@
   { "key":"race", "op":"eq", "value":"Continuous", "label":"Continuous Trap" },
   { "key":"race", "op":"eq", "value":"Normal", "label":"Normal Trap" },
 
-  { "key":"type", "op":"eq", "value":"XYZ Monster", "label":"XYZ Monster" },
-  { "key":"type", "op":"eq", "value":"Link Monster", "label":"Link Monster" },
-  { "key":"type", "op":"eq", "value":"Synchro Monster", "label":"Synchro Monster" },
-  { "key":"type", "op":"eq", "value":"Fusion Monster", "label":"Fusion Monster" },
+  { "key":"xyz", "op":"eq", "value": true, "label":"Xyz Monster" },
+  { "key":"link", "op":"eq", "value": true, "label":"Link Monster" },
+  { "key":"synchro", "op":"eq", "value": true, "label":"Synchro Monster" },
+  { "key":"fusion", "op":"eq", "value": true, "label":"Fusion Monster" },
 
   { "key":"effect", "op":"eq", "value":false, "label":"Non-Effect Monster" },
 
@@ -200,6 +200,12 @@
 
   { "key":"firstSetYear", "op":"lowerEq", "value":2005, "label":"First Print before 2005" },
   { "key":"firstSetYear", "op":"between", "value":2005, "value2":2020, "label":"First Print between 2005-2020" },
-  { "key":"firstSetYear", "op":"higherEq", "value":2020, "label":"First Print after 2020" }
+  { "key":"firstSetYear", "op":"higherEq", "value":2020, "label":"First Print after 2020" },
+  
+  { "key":"hasRarity", "op":"contains", "value":"Common", "label":"Has Common print" },
+  { "key":"hasRarity", "op":"contains", "value":"Super Rare", "label":"Has Super Rare print" },
+  { "key":"hasRarity", "op":"contains", "value":"Ultra Rare", "label":"Has Ultra Rare print" }
+  
+
 
 ]

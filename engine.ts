@@ -3,6 +3,22 @@ import { DEBUG_RULES_ENABLED, DEBUG_RULES } from "./debugRules";
 import { getSetYearByCode } from "./src/setYear";
 
 export type RNG = () => number;
+export interface SeedObj {
+  s: string;
+  n: number;
+}
+
+
+export function dateSeed(): SeedObj {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const s = `${yyyy}${mm}${dd}`;
+  return { s, n: Number(s) };
+}
+
+
 
 export type RuleOp =
   | "eq" | "neq"
@@ -16,7 +32,7 @@ export type RuleKey =
   | "spellType" | "trapType" | "kind"
   | "attribute" | "tuner" | "effect" | "ritual" | "pendulum" | "flip"
   | "xyz" | "fusion" | "synchro" | "link"
-  | "desc" | "setYear" | "firstSetYear"
+  | "desc" | "setYear" | "firstSetYear" | "hasRarity"
   | string;
 
 export interface Rule {
@@ -29,6 +45,14 @@ export interface Rule {
 
 export type CardKind = "monster" | "spell" | "trap";
 
+export interface CardSet {
+  set_name?: string;
+  set_code?: string;
+  set_rarity?: string;
+  set_rarity_code?: string;
+  set_price?: string;
+}
+
 export interface Card {
   id: number | string;
   name: string;
@@ -40,7 +64,7 @@ export interface Card {
   attribute?: string | null;
   monsterType?: string | null;
   atk?: number | null;
-  def?:number | null
+  def?: number | null;
 
   level?: number | null;
   rank?: number | null;
@@ -68,15 +92,13 @@ export interface Card {
   info?: string;
   setYears?: number[];
 
+  // ✅ rarity print-ek ehhez kellenek
+  card_sets?: CardSet[];
 
   // allow extra keys
   [k: string]: unknown;
 }
 
-export interface SeedObj {
-  s: string;
-  n: number;
-}
 
 /* =========================
    RNG + SEED
@@ -89,15 +111,6 @@ export function mulberry32(a: number): RNG {
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
-}
-
-export function dateSeed(): SeedObj {
-const d = new Date();
-const yyyy = d.getFullYear();
-const mm = String(d.getMonth() + 1).padStart(2, "0");
-const dd = String(d.getDate()).padStart(2, "0");
-const s = `${yyyy}${mm}${dd}`;
-return { s, n: Number(s) };
 }
 
 /* =========================
@@ -209,6 +222,24 @@ export function matches(card: Card, rule: Rule): boolean {
       break;
     }
 
+    case "hasRarity": {
+      const target = String(rule.value ?? "");
+      const sets = (card as any).card_sets;
+
+      if (!target || !Array.isArray(sets)) return false;
+
+      // op eq / contains támogatás
+      if (rule.op === "contains") {
+        const t = target.toLowerCase();
+        return sets.some((s: any) =>
+          typeof s?.set_rarity === "string" &&
+          s.set_rarity.toLowerCase().includes(t)
+        );
+      }
+
+      // default: eq
+      return sets.some((s: any) => s?.set_rarity === target);
+    }
 
 
     default:
