@@ -104,7 +104,7 @@ let mistakes = 0;
 let startTs = Date.now();
 let activeCell: { r: number; c: number } | null = null;
 
-const MIN_SOLUTIONS_PER_CELL = 20;
+const MIN_SOLUTIONS_PER_CELL = 30;
 let cellSolutionCounts: CellCounts = Array.from({ length: 3 }, () => Array(3).fill(0));
 
 // ✅ cellánként a TE lerakott lapod community %-a

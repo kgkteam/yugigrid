@@ -367,17 +367,85 @@ function isSpellTrapRule(rule: Rule): boolean {
   if (!rule) return false;
   if (rule.key === "race") return true;
   if (rule.key === "spellType" || rule.key === "trapType") return true;
-  if (rule.key === "kind" && rule.op === "eq" &&
-      ((rule.value as unknown) === "spell" || (rule.value as unknown) === "trap")) return true;
-  if (rule.key === "type" && rule.op === "eq" &&
-      ((rule.value as unknown) === "Spell Card" || (rule.value as unknown) === "Trap Card")) return true;
+  if (
+    rule.key === "kind" &&
+    rule.op === "eq" &&
+    (rule.value === "spell" || rule.value === "trap")
+  )
+    return true;
+  if (
+    rule.key === "type" &&
+    rule.op === "eq" &&
+    (rule.value === "Spell Card" || rule.value === "Trap Card")
+  )
+    return true;
   return false;
 }
+
+/* ---------- overlap helpers (LEVEL) ---------- */
+
+function levelInterval(rule: Rule): [number, number] | null {
+  if (rule.key !== "level") return null;
+
+  const op = rule.op;
+  const v1 = typeof rule.value === "number" ? rule.value : null;
+  const v2 = typeof rule.value2 === "number" ? rule.value2 : null;
+
+  if (op === "eq" && v1 != null) return [v1, v1];
+  if (op === "between" && v1 != null && v2 != null)
+    return [Math.min(v1, v2), Math.max(v1, v2)];
+
+  // nálad: "Level 5 or higher" = op:"higher", value:4
+  if (op === "higher" && v1 != null) return [v1 + 1, Number.POSITIVE_INFINITY];
+  if (op === "higherEq" && v1 != null) return [v1, Number.POSITIVE_INFINITY];
+
+  if (op === "lower" && v1 != null) return [Number.NEGATIVE_INFINITY, v1 - 1];
+  if (op === "lowerEq" && v1 != null) return [Number.NEGATIVE_INFINITY, v1];
+
+  return null;
+}
+
+function intervalsOverlap(a: [number, number], b: [number, number]): boolean {
+  return a[0] <= b[1] && b[0] <= a[1];
+}
+
+/* ---------- overlap helpers (ATK/DEF) ---------- */
+
+function numInterval(rule: Rule, key: string): [number, number] | null {
+  if (rule.key !== key) return null;
+
+  const op = rule.op;
+  const v1 = typeof rule.value === "number" ? rule.value : null;
+  const v2 = typeof rule.value2 === "number" ? rule.value2 : null;
+
+  if (op === "eq" && v1 != null) return [v1, v1];
+
+  // between: inclusive
+  if (op === "between" && v1 != null && v2 != null) {
+    return [Math.min(v1, v2), Math.max(v1, v2)];
+  }
+
+  // IMPORTANT: nálad pl:
+  // ATK higher 2999 => "3000 or higher" => [3000, +inf]
+  if (op === "higher" && v1 != null) return [v1 + 1, Number.POSITIVE_INFINITY];
+  if (op === "higherEq" && v1 != null) return [v1, Number.POSITIVE_INFINITY];
+
+  // ATK lower 3001 => "3000 or lower" => [-inf, 3000]
+  if (op === "lower" && v1 != null) return [Number.NEGATIVE_INFINITY, v1 - 1];
+  if (op === "lowerEq" && v1 != null) return [Number.NEGATIVE_INFINITY, v1];
+
+  return null;
+}
+
+
+/* ---------- main ---------- */
 
 function rulesCompatibleSimple(a: Rule, b: Rule): boolean {
   if (!a || !b) return false;
 
-  if (a.key === b.key) return false;
+  // ugyanaz a key alapból oké, kivéve ha teljesen ugyanaz a rule (duplikátum)
+  if (a.key === b.key && a.op === b.op && a.value === b.value && a.value2 === b.value2) return false;
+
 
   if (a.key === "desc" || b.key === "desc") {
     return a.value !== b.value;
@@ -424,12 +492,35 @@ function rulesCompatibleSimple(a: Rule, b: Rule): boolean {
   if (isTypeRule(a, "Link Monster") && (b.key === "level" || b.key === "rank")) return false;
   if (isTypeRule(b, "Link Monster") && (a.key === "level" || a.key === "rank")) return false;
 
-    // setYear vs firstSetYear: ne ütközzenek ugyanabban a cellában
+  // setYear vs firstSetYear: ne ütközzenek ugyanabban a cellában
   if (a.key === "setYear" && b.key === "firstSetYear") return false;
   if (a.key === "firstSetYear" && b.key === "setYear") return false;
 
+  // ✅ LEVEL vs LEVEL: csak átfedést tilt
+  if (a.key === "level" && b.key === "level") {
+    const ia = levelInterval(a);
+    const ib = levelInterval(b);
+    if (ia && ib && intervalsOverlap(ia, ib)) return false;
+  }
+
+    // ✅ ATK vs ATK: csak átfedést tilt
+  if (a.key === "ATK" && b.key === "ATK") {
+    const ia = numInterval(a, "ATK");
+    const ib = numInterval(b, "ATK");
+    if (ia && ib && intervalsOverlap(ia, ib)) return false;
+  }
+
+  // ✅ DEF vs DEF: csak átfedést tilt
+  if (a.key === "DEF" && b.key === "DEF") {
+    const ia = numInterval(a, "DEF");
+    const ib = numInterval(b, "DEF");
+    if (ia && ib && intervalsOverlap(ia, ib)) return false;
+  }
+
+
   return true;
 }
+
 
 export function rulesCompatible(a: Rule, b: Rule): boolean {
   if (!rulesCompatibleSimple(a, b)) return false;
