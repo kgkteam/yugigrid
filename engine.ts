@@ -346,6 +346,8 @@ function isSpellTrapRule(rule: Rule): boolean {
 function rulesCompatibleSimple(a: Rule, b: Rule): boolean {
   if (!a || !b) return false;
 
+  if (a.key === b.key) return false;
+
   if (a.key === "desc" || b.key === "desc") {
     return a.value !== b.value;
   }
@@ -394,11 +396,6 @@ function rulesCompatibleSimple(a: Rule, b: Rule): boolean {
     // setYear vs firstSetYear: ne ütközzenek ugyanabban a cellában
   if (a.key === "setYear" && b.key === "firstSetYear") return false;
   if (a.key === "firstSetYear" && b.key === "setYear") return false;
-
-  // és ugyanaz a kulcs se legyen egyszerre
-  if (a.key === "firstSetYear" && b.key === "firstSetYear") return false;
-  if (a.key === "setYear" && b.key === "setYear") return false;
-
 
   return true;
 }
