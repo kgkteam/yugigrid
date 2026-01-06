@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { load } from "cheerio";
+import type { Element } from "domhandler";
 
 const OUT = path.resolve("src/data/banlistEver.ts");
 
@@ -52,10 +53,10 @@ function parseEverBanlistedNamesFromYugipedia(html: string): string[] {
   const $ = load(html);
 
   // legnagyobb wikitable kiválasztása (chart)
-  let bestTable: any = null;
+  let bestTable: ReturnType<typeof $> | null = null;
   let bestScore = -1;
 
-  $("table.wikitable").each((_, tbl) => {
+  $("table.wikitable").each((_i: number, tbl: Element) => {
     const $tbl = $(tbl);
     const rows = $tbl.find("tr").length;
     const cols = $tbl.find("tr").first().find("th,td").length;
@@ -67,11 +68,11 @@ function parseEverBanlistedNamesFromYugipedia(html: string): string[] {
   });
 
   if (!bestTable) throw new Error("No wikitable found.");
-  const $table = bestTable as any;
+  const $table = bestTable;
 
   const everNames: string[] = [];
 
-  $table.find("tr").each((_, tr) => {
+  $table.find("tr").each((_i: number, tr: Element) => {
     const $tr = $(tr);
 
     // kártyanév: sor első TH-ja (row header)
@@ -84,7 +85,7 @@ function parseEverBanlistedNamesFromYugipedia(html: string): string[] {
 
     let hit = false;
 
-    tds.each((_, td) => {
+    tds.each((_j: number, td: Element) => {
       const $cell = $(td);
       const cls = ($cell.attr("class") || "").toLowerCase();
       const text = $cell.text().trim();
@@ -93,7 +94,7 @@ function parseEverBanlistedNamesFromYugipedia(html: string): string[] {
       if (
         cls.includes("status-0") || // Forbidden
         cls.includes("status-1") || // Limited
-        cls.includes("status-2")    // Semi-Limited
+        cls.includes("status-2") // Semi-Limited
       ) {
         hit = true;
         return false; // break
@@ -124,10 +125,7 @@ function parseEverBanlistedNamesFromYugipedia(html: string): string[] {
  * NOTE: nálad látszott, hogy a listák oldalán nincs érdemi card link (cid links: 0),
  * de ez a rész maradhat, ha később működni kezd / más locale-lal működik.
  */
-async function addKonami2012PlusEverIds(
-  everIds: Set<number>,
-  missing: string[]
-) {
+async function addKonami2012PlusEverIds(everIds: Set<number>, missing: string[]) {
   const BASE =
     "https://www.db.yugioh-card.com/yugiohdb/forbidden_limited.action?request_locale=en";
 
@@ -136,7 +134,7 @@ async function addKonami2012PlusEverIds(
   const $ = load(baseHtml);
 
   const dates = new Set<string>();
-  $("option").each((_, el) => {
+  $("option").each((_i: number, el: Element) => {
     const v = $(el).attr("value");
     if (v && /^\d{4}-\d{2}-\d{2}$/.test(v)) dates.add(v);
   });
@@ -155,7 +153,7 @@ async function addKonami2012PlusEverIds(
     console.log("  cid links:", $links.length);
 
     if ($links.length > 500) {
-      $links = $links.filter((_, a) => {
+      $links = $links.filter((_i: number, a: Element) => {
         const href = $$(a).attr("href") || "";
         return href.includes("cid=");
       });
@@ -168,7 +166,7 @@ async function addKonami2012PlusEverIds(
       console.log("  fallback card_search.action links:", $links.length);
     }
 
-    $links.each((_, a) => {
+    $links.each((_i: number, a: Element) => {
       const nm = $$(a).text().replace(/\s+/g, " ").trim();
       if (!nm) return;
 
@@ -178,7 +176,7 @@ async function addKonami2012PlusEverIds(
     });
 
     // throttle (stabil)
-    await new Promise((r) => setTimeout(r, 200));
+    await new Promise<void>((resolve) => setTimeout(resolve, 200));
   }
 }
 
