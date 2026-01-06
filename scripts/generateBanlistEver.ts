@@ -221,10 +221,10 @@ ${sorted.map((id) => `  ${id},`).join("\n")}
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, content, "utf8");
 
-  console.log(\`DONE → \${OUT}\`);
-  console.log(\`IDs: \${sorted.length}\`);
-  console.log(\`Missing count: \${missing.length}\`);
-  if (missing.length) console.log("Missing sample:", missing.slice(0, 30));
+console.log(`DONE -> ${OUT}`);
+console.log(`IDs: ${sorted.length}`);
+console.log(`Missing count: ${missing.length}`);
+if (missing.length) console.log("Missing sample:", missing.slice(0, 30));
 }
 
 main().catch((e) => {
