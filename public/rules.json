@@ -173,16 +173,16 @@
   { "key":"linkRating", "op":"higher", "value":2, "label":"Link 3 or higher" },
   { "key":"linkRating", "op":"higher", "value":3, "label":"Link 4 or higher" },
 
-  { "key":"race", "op":"eq", "value":"Normal", "label":"Normal Spell/Trap" },
-  { "key":"race", "op":"eq", "value":"Continuous", "label":"Continuous Spell" },
-  { "key":"race", "op":"eq", "value":"Quick-Play", "label":"Quick-Play Spell" },
-  { "key":"race", "op":"eq", "value":"Equip", "label":"Equip Spell" },
-  { "key":"race", "op":"eq", "value":"Field", "label":"Field Spell" },
-  { "key":"race", "op":"eq", "value":"Ritual", "label":"Ritual Spell" },
+  { "key":"spellType", "op":"eq", "value":"Normal", "label":"Normal Spell" },
+  { "key":"spellType", "op":"eq", "value":"Continuous", "label":"Continuous Spell" },
+  { "key":"spellType", "op":"eq", "value":"Quick-Play", "label":"Quick-Play Spell" },
+  { "key":"spellType", "op":"eq", "value":"Equip", "label":"Equip Spell" },
+  { "key":"spellType", "op":"eq", "value":"Field", "label":"Field Spell" },
+  { "key":"spellType", "op":"eq", "value":"Ritual", "label":"Ritual Spell" },
 
-  { "key":"race", "op":"eq", "value":"Counter", "label":"Counter Trap" },
-  { "key":"race", "op":"eq", "value":"Continuous", "label":"Continuous Trap" },
-  { "key":"race", "op":"eq", "value":"Normal", "label":"Normal Trap" },
+  { "key":"trapType",  "op":"eq", "value":"Normal", "label":"Normal Trap" },
+  { "key":"trapType",  "op":"eq", "value":"Counter", "label":"Counter Trap" },
+  { "key":"trapType",  "op":"eq", "value":"Continuous", "label":"Continuous Trap" },
 
   { "key":"xyz", "op":"eq", "value": true, "label":"Xyz Monster" },
   { "key":"link", "op":"eq", "value": true, "label":"Link Monster" },
@@ -208,9 +208,9 @@
   
   { "key":"hasRarity", "op":"contains", "value":"Common", "label":"Has Common print" },
   { "key":"hasRarity", "op":"contains", "value":"Super Rare", "label":"Has Super Rare print" },
-  { "key":"hasRarity", "op":"contains", "value":"Ultra Rare", "label":"Has Ultra Rare print" }
+  { "key":"hasRarity", "op":"contains", "value":"Ultra Rare", "label":"Has Ultra Rare print" },
 
+  { "key":"banlistEver", "op":"eq", "value":true, "label":"Was ever Limited / Semi-Limited / Forbidden (TCG)" }
 
-  
 
 ]

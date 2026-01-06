@@ -1,6 +1,8 @@
 // engine.ts — pure logic, no UI
 import { DEBUG_RULES_ENABLED, DEBUG_RULES } from "./debugRules";
 import { getSetYearByCode } from "./src/setYear";
+import { BANLIST_EVER_IDS } from "./src/data/banlistEver";
+
 
 export type RNG = () => number;
 export interface SeedObj {
@@ -32,7 +34,7 @@ export type RuleKey =
   | "spellType" | "trapType" | "kind"
   | "attribute" | "tuner" | "effect" | "ritual" | "pendulum" | "flip"
   | "xyz" | "fusion" | "synchro" | "link"
-  | "desc" | "setYear" | "firstSetYear" | "hasRarity"
+  | "desc" | "setYear" | "firstSetYear" | "hasRarity" | "banlistEver"
   | string;
 
 export interface Rule {
@@ -197,6 +199,17 @@ export function matches(card: Card, rule: Rule): boolean {
       v = card?.race;
       break;
 
+    case "spellType":
+      if (card?.type !== "Spell Card") return false;
+      v = card?.race; // YGOPRODeck: spell "race" = Spell Type (Quick-Play, Field, etc.)
+      break;
+
+    case "trapType":
+      if (card?.type !== "Trap Card") return false;
+      v = card?.race; // YGOPRODeck: trap "race" = Trap Type (Normal, Counter, Continuous)
+      break;
+
+
     case "nameLength":
       v = card?.name.length;
       break;
@@ -221,6 +234,16 @@ export function matches(card: Card, rule: Rule): boolean {
       const ys = (card as any)?.setYears;
       v = Array.isArray(ys) && ys.length ? ys[0] : null;
       break;
+      }
+
+    case "banlistEver": {
+      const idNum = Number((card as any).id);
+      if (!Number.isFinite(idNum)) return false;
+
+      return rule.value === true
+        ? BANLIST_EVER_IDS.has(idNum)
+        : !BANLIST_EVER_IDS.has(idNum);
+
     }
 
     case "hasRarity": {
@@ -241,6 +264,8 @@ export function matches(card: Card, rule: Rule): boolean {
       // default: eq
       return sets.some((s: any) => s?.set_rarity === target);
     }
+
+    
 
 
     default:

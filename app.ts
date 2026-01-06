@@ -306,11 +306,8 @@ function openPicker(seedStr: string, r: number, c: number): void {
   // ❌ NINCS többé "used" szűrés
   // a kártyák áthelyezését a pickCard() kezeli
 
-  ACTIVE_CARDS = CARDS.filter((card) => {
-    if (DAY_IS_SPELLTRAP) return card.kind !== "monster";
-    return card.kind === "monster";
-  });
-
+  ACTIVE_CARDS = CARDS
+  
   ACTIVE_CARDS.sort((a, b) => a.name.localeCompare(b.name));
 
   const rowRule = rowRules[r];
