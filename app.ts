@@ -306,8 +306,10 @@ function openPicker(seedStr: string, r: number, c: number): void {
   // ❌ NINCS többé "used" szűrés
   // a kártyák áthelyezését a pickCard() kezeli
 
-  ACTIVE_CARDS = CARDS
-  
+  ACTIVE_CARDS = CARDS.filter((card) => {
+    if (DAY_IS_SPELLTRAP) return card.kind !== "monster";
+    return card.kind === "monster";
+  });
   ACTIVE_CARDS.sort((a, b) => a.name.localeCompare(b.name));
 
   const rowRule = rowRules[r];
@@ -1085,8 +1087,6 @@ async function init(): Promise<void> {
   CARDS = rawCards.map(normalizeCard);
   CARD_BY_ID = new Map(CARDS.map((c) => [String(c.id), c]));
 
-  console.log("CARDS LOADED:", CARDS.length);
-
   const base = (Number(seedStr) || 123456) >>> 0;
   const pools = buildRulePools(RULE_POOL);
   const rand = mulberry32(base);
@@ -1102,17 +1102,6 @@ async function init(): Promise<void> {
     if (isSpellTrap) return card.kind !== "monster";
     return card.kind === "monster";
   });
-
-  // ===== DEBUG LOGS =====
-  console.log("ATK>=3000:", generationCards.filter(c => typeof c.atk==="number" && (c.atk as number) >= 3000).length);
-  console.log("DEF 2000-3000:", generationCards.filter(c => typeof c.def==="number" && (c.def as number) >= 2000 && (c.def as number) <= 3000).length);
-
-  console.log("link count:", generationCards.filter(c => c.link === true).length);
-  console.log("DAY_IS_SPELLTRAP:", isSpellTrap);
-  console.log("generationCards length:", generationCards.length);
-  console.log("sample generationCard:", generationCards[0]);
-  console.log("Link flagged count:", generationCards.filter(c => c.link === true).length);
-  console.log("Link typeline count:", generationCards.filter(c => c.info?.includes("Link")).length);
 
   // ======================
 
