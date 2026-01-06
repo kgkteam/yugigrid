@@ -52,8 +52,8 @@ async function fetchText(url: string): Promise<string> {
 function parseEverBanlistedNamesFromYugipedia(html: string): string[] {
   const $ = load(html);
 
-  // legnagyobb wikitable kiválasztása (chart)
-  let bestTable: ReturnType<typeof $> | null = null;
+  // ✅ IMPORTANT: Elementet tárolunk, nem Cheerio-t (különben TS néha "never"-re fut)
+  let bestTableEl: Element | null = null;
   let bestScore = -1;
 
   $("table.wikitable").each((_i: number, tbl: Element) => {
@@ -61,14 +61,17 @@ function parseEverBanlistedNamesFromYugipedia(html: string): string[] {
     const rows = $tbl.find("tr").length;
     const cols = $tbl.find("tr").first().find("th,td").length;
     const score = rows * cols;
+
     if (score > bestScore) {
       bestScore = score;
-      bestTable = $tbl;
+      bestTableEl = tbl;
     }
   });
 
-  if (!bestTable) throw new Error("No wikitable found.");
-  const $table = bestTable;
+  if (!bestTableEl) throw new Error("No wikitable found.");
+
+  // itt csomagoljuk vissza Cheerio-vá
+  const $table = $(bestTableEl);
 
   const everNames: string[] = [];
 
@@ -218,9 +221,9 @@ ${sorted.map((id) => `  ${id},`).join("\n")}
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, content, "utf8");
 
-  console.log(`DONE → ${OUT}`);
-  console.log(`IDs: ${sorted.length}`);
-  console.log(`Missing count: ${missing.length}`);
+  console.log(\`DONE → \${OUT}\`);
+  console.log(\`IDs: \${sorted.length}\`);
+  console.log(\`Missing count: \${missing.length}\`);
   if (missing.length) console.log("Missing sample:", missing.slice(0, 30));
 }
 
