@@ -55,32 +55,43 @@
         <p class="sub">Daily Yu-Gi-Oh! challenge</p>
       </div>
 
-      <div class="topbar-right">
-        <div class="pill dayPill">
-          <div class="pillLabel" id="dayLabel">Day</div>
-          <div class="pillValue" id="dayType">Monster</div>
-        </div>
+<!-- (opcionális) ezt a chainScreen divet a daily oldalon törölheted -->
+<!-- <div id="chainScreen" class="chainScreen" style="display:none;"></div> -->
 
-        <div class="pill">
-          <div class="pillLabel">Mistakes</div>
-          <div class="pillValue" id="mistakes">0</div>
-        </div>
+    <div class="topbar-right">
+      <div class="pill dayPill">
+        <div class="pillLabel" id="dayLabel">Day</div>
+        <div class="pillValue" id="dayType">Monster</div>
+      </div>
 
-        <div class="pill">
-          <div class="pillLabel">Time</div>
-          <div class="pillValue" id="time">00:00</div>
-        </div>
+      <div class="pill">
+        <div class="pillLabel">Mistakes</div>
+        <div class="pillValue" id="mistakes">0</div>
+      </div>
 
-        <a
-          class="pill paypalPill"
-          id="paypalDonate"
-          href="https://www.paypal.com/donate/?hosted_button_id=K8Y25ASFUM5V8"
-          target="_blank"
-          rel="noopener"
-        >
-          <div class="pillLabel">Support</div>
-          <div class="pillValue">Donate</div>
-        </a>
+      <div class="pill">
+        <div class="pillLabel">Time</div>
+        <div class="pillValue" id="time">00:00</div>
+      </div>
+
+      <a
+        class="pill paypalPill"
+        id="paypalDonate"
+        href="https://www.paypal.com/donate/?hosted_button_id=K8Y25ASFUM5V8"
+        target="_blank"
+        rel="noopener"
+      >
+        <div class="pillLabel">Support</div>
+        <div class="pillValue">Donate</div>
+      </a>
+
+<a class="pill mode active chainPill" id="startChain" href="/chain.html">
+  <div class="pillLabel">Mode</div>
+  <div class="pillValue">Chain</div>
+</a>
+
+    </div>
+
       </div>
     </div>
 
@@ -153,6 +164,6 @@
     </div>
   </div>
 
-  <script type="module" src="./app.ts"></script>
+  <script type="module" src="/src/app.ts"></script>
 </body>
 </html>

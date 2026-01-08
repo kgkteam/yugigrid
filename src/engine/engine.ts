@@ -1,15 +1,12 @@
 // engine.ts — pure logic, no UI
-import { DEBUG_RULES_ENABLED, DEBUG_RULES } from "./debugRules";
-import { getSetYearByCode } from "./src/setYear";
-import { BANLIST_EVER_IDS } from "./src/data/banlistEver";
-
+import { getSetYearByCode } from "../setYear";
+import { BANLIST_EVER_IDS } from "../data/banlistEver";
 
 export type RNG = () => number;
 export interface SeedObj {
   s: string;
   n: number;
 }
-
 
 export function dateSeed(): SeedObj {
   const d = new Date();
@@ -20,12 +17,10 @@ export function dateSeed(): SeedObj {
   return { s, n: Number(s) };
 }
 
-
-
 export type RuleOp =
   | "eq" | "neq"
   | "lower" | "higher" | "lowerEq" | "higherEq"
-  | "contains" | "between" | "wordCount" | "special" ;
+  | "contains" | "between" | "wordCount" | "special";
 
 export type RuleKey =
   | "all" | "any"
@@ -58,9 +53,8 @@ export interface CardSet {
 export interface Card {
   id: number | string;
   name: string;
-  desc: string;
+  desc?: string;
 
-  // API-ish / normalized fields (some optional)
   type?: string;
   race?: string | null;
   attribute?: string | null;
@@ -95,13 +89,10 @@ export interface Card {
   info?: string;
   setYears?: number[];
 
-  // ✅ rarity print-ek ehhez kellenek
   card_sets?: CardSet[];
 
-  // allow extra keys
   [k: string]: unknown;
 }
-
 
 /* =========================
    RNG + SEED
@@ -122,24 +113,14 @@ export function mulberry32(a: number): RNG {
 
 export type DayType = "Monster" | "Spell/Trap";
 
-/**
- * Egyetlen közös forrás arra, hogy Monster nap van-e vagy Spell/Trap nap.
- * Alap: a dateSeed().s (YYYYMMDD), tehát "a rendszer napja".
- *
- * Szabály (könnyen átírható):
- * - páros DD = Spell/Trap
- * - páratlan DD = Monster
- */
 export function getSystemDayType(): DayType {
   const { s, n } = dateSeed();
 
-  // Ha YYYYMMDD, akkor a nap számából döntünk
   if (/^\d{8}$/.test(s)) {
     const dd = Number(s.slice(6, 8));
     return (dd % 2 === 0) ? "Spell/Trap" : "Monster";
   }
 
-  // Custom seed fallback: parity a számon
   return (Number.isFinite(n) && n % 2 === 0) ? "Spell/Trap" : "Monster";
 }
 
@@ -148,18 +129,18 @@ export function isSpellTrapDay(): boolean {
 }
 
 export function getSystemDayLabel(): string {
-  // UI-hoz: pl. Monday/Tuesday...
   const { s } = dateSeed();
   if (/^\d{8}$/.test(s)) {
     const y = Number(s.slice(0, 4));
     const m = Number(s.slice(4, 6));
     const d = Number(s.slice(6, 8));
-    const dt = new Date(y, m - 1, d); // local, ugyanúgy mint dateSeed()
+    const dt = new Date(y, m - 1, d);
     const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
     return dayNames[dt.getDay()];
   }
   return "Day";
 }
+
 function isSpellOrTrap(card: Card | null | undefined): boolean {
   return card?.type === "Spell Card" || card?.type === "Trap Card";
 }
@@ -168,8 +149,36 @@ function isSpellOrTrap(card: Card | null | undefined): boolean {
    MATCHING
    ========================= */
 
+function toNum(x: unknown): number {
+  if (typeof x === "number") return x;
+  if (typeof x === "string") {
+    const s = x.trim();
+    if (!s) return NaN;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : NaN;
+  }
+  return NaN;
+}
+
 export function matches(card: Card, rule: Rule): boolean {
   if (!rule) return false;
+
+  // SPELL/TRAP ONLY GATE
+  if (isSpellOrTrap(card)) {
+    const allowedST = new Set<Rule["key"]>([
+      "desc",
+      "descLength",
+      "banlistEver",
+      "setYear",
+      "firstSetYear",
+      "race",
+      "spellType",
+      "trapType",
+      "hasRarity",
+    ]);
+
+    if (!allowedST.has(rule.key)) return false;
+  }
 
   let v: unknown;
 
@@ -187,11 +196,15 @@ export function matches(card: Card, rule: Rule): boolean {
       break;
 
     case "monsterType":
-      v = card?.monsterType;
+      v = (card as any)?.monsterType ?? (card as any)?.race ?? null;
       break;
 
     case "type":
       v = card?.type;
+      break;
+
+    case "desc":
+      v = card?.desc ?? null;
       break;
 
     case "race":
@@ -201,21 +214,20 @@ export function matches(card: Card, rule: Rule): boolean {
 
     case "spellType":
       if (card?.type !== "Spell Card") return false;
-      v = card?.race; // YGOPRODeck: spell "race" = Spell Type (Quick-Play, Field, etc.)
+      v = card?.race;
       break;
 
     case "trapType":
       if (card?.type !== "Trap Card") return false;
-      v = card?.race; // YGOPRODeck: trap "race" = Trap Type (Normal, Counter, Continuous)
+      v = card?.race;
       break;
 
-
     case "nameLength":
-      v = card?.name.length;
+      v = card?.name?.length ?? null;
       break;
 
     case "descLength":
-      v = card?.desc.length;
+      v = card?.desc?.length ?? null;
       break;
 
     case "ATK":
@@ -234,7 +246,7 @@ export function matches(card: Card, rule: Rule): boolean {
       const ys = (card as any)?.setYears;
       v = Array.isArray(ys) && ys.length ? ys[0] : null;
       break;
-      }
+    }
 
     case "banlistEver": {
       const idNum = Number((card as any).id);
@@ -243,7 +255,6 @@ export function matches(card: Card, rule: Rule): boolean {
       return rule.value === true
         ? BANLIST_EVER_IDS.has(idNum)
         : !BANLIST_EVER_IDS.has(idNum);
-
     }
 
     case "hasRarity": {
@@ -252,7 +263,6 @@ export function matches(card: Card, rule: Rule): boolean {
 
       if (!target || !Array.isArray(sets)) return false;
 
-      // op eq / contains támogatás
       if (rule.op === "contains") {
         const t = target.toLowerCase();
         return sets.some((s: any) =>
@@ -261,12 +271,8 @@ export function matches(card: Card, rule: Rule): boolean {
         );
       }
 
-      // default: eq
       return sets.some((s: any) => s?.set_rarity === target);
     }
-
-    
-
 
     default:
       v = (card as Record<string, unknown>)[String(rule.key)];
@@ -278,66 +284,75 @@ export function matches(card: Card, rule: Rule): boolean {
   const value = rule.value;
   const value2 = rule.value2;
 
-  // ✅ setYear (setYears): elég ha BÁRMELYIK év passzol
+  // ✅ setYear: v = number[]
   if (Array.isArray(v)) {
-    const years = v as number[];
+    const years = v as unknown[];
 
-    return years.some((year) => {
-      if (op === "eq") return year === value;
-      if (op === "neq") return year !== value;
+    const v1 = typeof value === "number" ? value : Number(value);
+    const v2 = typeof value2 === "number" ? value2 : Number(value2);
 
-      if (op === "lower") return typeof value === "number" && year < value;
-      if (op === "higher") return typeof value === "number" && year > value;
-      if (op === "lowerEq") return typeof value === "number" && year <= value;
-      if (op === "higherEq") return typeof value === "number" && year >= value;
+    return years.some((y) => {
+      const year = typeof y === "number" ? y : Number(y);
+      if (!Number.isFinite(year)) return false;
+
+      if (op === "eq") return Number.isFinite(v1) && year === v1;
+      if (op === "neq") return Number.isFinite(v1) && year !== v1;
+
+      if (op === "lower") return Number.isFinite(v1) && year < v1;
+      if (op === "higher") return Number.isFinite(v1) && year > v1;
+      if (op === "lowerEq") return Number.isFinite(v1) && year <= v1;
+      if (op === "higherEq") return Number.isFinite(v1) && year >= v1;
 
       if (op === "between") {
-        return (
-          typeof value === "number" &&
-          typeof value2 === "number" &&
-          year >= value &&
-          year <= value2
-        );
+        return Number.isFinite(v1) && Number.isFinite(v2) && year >= v1 && year <= v2;
       }
 
       return false;
     });
   }
 
-  // ✅ innentől a “normál” (nem tömb) mezők
-  if (op === "eq") return v === value;
-  if (op === "neq") return v !== value;
+  /* =========================
+     ✅ NUMERIC-SAFE COMPARISONS
+     (fix: "1" vs 1, string atk/def/level/rank is)
+     ========================= */
 
-  if (op === "lower") return typeof v === "number" && typeof value === "number" && v < value;
-  if (op === "higher") return typeof v === "number" && typeof value === "number" && v > value;
-  if (op === "lowerEq") return typeof v === "number" && typeof value === "number" && v <= value;
-  if (op === "higherEq") return typeof v === "number" && typeof value === "number" && v >= value;
+  const vn = toNum(v);
+  const n1 = toNum(value);
+  const n2 = toNum(value2);
 
-  if (op === "between") {
-    return (
-      typeof v === "number" &&
-      typeof value === "number" &&
-      typeof value2 === "number" &&
-      v >= value &&
-      v <= value2
-    );
+  if (op === "eq") {
+    if (Number.isFinite(vn) && Number.isFinite(n1)) return vn === n1;
+    return v === value;
   }
 
-  if (op === "wordCount") return typeof v === "string" && v.split(" ").length === value;
+  if (op === "neq") {
+    if (Number.isFinite(vn) && Number.isFinite(n1)) return vn !== n1;
+    return v !== value;
+  }
+
+  if (op === "lower") return Number.isFinite(vn) && Number.isFinite(n1) && vn < n1;
+  if (op === "higher") return Number.isFinite(vn) && Number.isFinite(n1) && vn > n1;
+  if (op === "lowerEq") return Number.isFinite(vn) && Number.isFinite(n1) && vn <= n1;
+  if (op === "higherEq") return Number.isFinite(vn) && Number.isFinite(n1) && vn >= n1;
+
+  if (op === "between") {
+    return Number.isFinite(vn) && Number.isFinite(n1) && Number.isFinite(n2) && vn >= n1 && vn <= n2;
+  }
+
+  if (op === "wordCount") return typeof v === "string" && v.trim().split(/\s+/).length === value;
 
   if (op === "special") return typeof v === "string" && /[^a-zA-Z\s]/.test(v);
 
   if (op === "contains") {
     if (typeof v !== "string") return false;
     const t = v.toLowerCase();
-    const v1 = String(value ?? "").toLowerCase();
-    const v2 = value2 ? String(value2).toLowerCase() : null;
-    return v2 ? t.includes(v1) || t.includes(v2) : t.includes(v1);
+    const vv1 = String(value ?? "").toLowerCase();
+    const vv2 = value2 ? String(value2).toLowerCase() : null;
+    return vv2 ? t.includes(vv1) || t.includes(vv2) : t.includes(vv1);
   }
 
   return false;
 }
-
 
 export function matchesCell(card: Card, rowRule: Rule, colRule: Rule): boolean {
   return matches(card, rowRule) && matches(card, colRule);
@@ -374,7 +389,6 @@ export function recomputeAllCellCounts(
 }
 
 export function pickRules(rand: RNG, pool: Rule[], n: number): Rule[] {
-
   const idxs = pool.map((_, i) => i);
   for (let i = idxs.length - 1; i > 0; i--) {
     const j = Math.floor(rand() * (i + 1));
@@ -399,14 +413,12 @@ function isSpellTrapRule(rule: Rule): boolean {
     rule.key === "kind" &&
     rule.op === "eq" &&
     (rule.value === "spell" || rule.value === "trap")
-  )
-    return true;
+  ) return true;
   if (
     rule.key === "type" &&
     rule.op === "eq" &&
     (rule.value === "Spell Card" || rule.value === "Trap Card")
-  )
-    return true;
+  ) return true;
   return false;
 }
 
@@ -423,7 +435,6 @@ function levelInterval(rule: Rule): [number, number] | null {
   if (op === "between" && v1 != null && v2 != null)
     return [Math.min(v1, v2), Math.max(v1, v2)];
 
-  // nálad: "Level 5 or higher" = op:"higher", value:4
   if (op === "higher" && v1 != null) return [v1 + 1, Number.POSITIVE_INFINITY];
   if (op === "higherEq" && v1 != null) return [v1, Number.POSITIVE_INFINITY];
 
@@ -448,32 +459,25 @@ function numInterval(rule: Rule, key: string): [number, number] | null {
 
   if (op === "eq" && v1 != null) return [v1, v1];
 
-  // between: inclusive
   if (op === "between" && v1 != null && v2 != null) {
     return [Math.min(v1, v2), Math.max(v1, v2)];
   }
 
-  // IMPORTANT: nálad pl:
-  // ATK higher 2999 => "3000 or higher" => [3000, +inf]
   if (op === "higher" && v1 != null) return [v1 + 1, Number.POSITIVE_INFINITY];
   if (op === "higherEq" && v1 != null) return [v1, Number.POSITIVE_INFINITY];
 
-  // ATK lower 3001 => "3000 or lower" => [-inf, 3000]
   if (op === "lower" && v1 != null) return [Number.NEGATIVE_INFINITY, v1 - 1];
   if (op === "lowerEq" && v1 != null) return [Number.NEGATIVE_INFINITY, v1];
 
   return null;
 }
 
-
 /* ---------- main ---------- */
 
 function rulesCompatibleSimple(a: Rule, b: Rule): boolean {
   if (!a || !b) return false;
 
-  // ugyanaz a key alapból oké, kivéve ha teljesen ugyanaz a rule (duplikátum)
   if (a.key === b.key && a.op === b.op && a.value === b.value && a.value2 === b.value2) return false;
-
 
   if (a.key === "desc" || b.key === "desc") {
     return a.value !== b.value;
@@ -520,39 +524,32 @@ function rulesCompatibleSimple(a: Rule, b: Rule): boolean {
   if (isTypeRule(a, "Link Monster") && (b.key === "level" || b.key === "rank")) return false;
   if (isTypeRule(b, "Link Monster") && (a.key === "level" || a.key === "rank")) return false;
 
-  // setYear vs firstSetYear: ne ütközzenek ugyanabban a cellában
   if (a.key === "setYear" && b.key === "firstSetYear") return false;
   if (a.key === "firstSetYear" && b.key === "setYear") return false;
 
-  // ✅ LEVEL vs LEVEL: csak átfedést tilt
   if (a.key === "level" && b.key === "level") {
     const ia = levelInterval(a);
     const ib = levelInterval(b);
-    if (ia && ib && intervalsOverlap(ia, ib)) return false;
+    if (ia && ib && !intervalsOverlap(ia, ib)) return false;
   }
 
-    // ✅ ATK vs ATK: csak átfedést tilt
   if (a.key === "ATK" && b.key === "ATK") {
     const ia = numInterval(a, "ATK");
     const ib = numInterval(b, "ATK");
-    if (ia && ib && intervalsOverlap(ia, ib)) return false;
+    if (ia && ib && !intervalsOverlap(ia, ib)) return false;
   }
 
-  // ✅ DEF vs DEF: csak átfedést tilt
   if (a.key === "DEF" && b.key === "DEF") {
     const ia = numInterval(a, "DEF");
     const ib = numInterval(b, "DEF");
-    if (ia && ib && intervalsOverlap(ia, ib)) return false;
+    if (ia && ib && !intervalsOverlap(ia, ib)) return false;
   }
-
 
   return true;
 }
 
-
 export function rulesCompatible(a: Rule, b: Rule): boolean {
-  if (!rulesCompatibleSimple(a, b)) return false;
-  return true;
+  return rulesCompatibleSimple(a, b);
 }
 
 /* =========================
@@ -613,18 +610,8 @@ export function pickNonColliding({
   for (let tries = 0; tries < maxTries; tries++) {
 
     const isLocalhost =
-    typeof location !== "undefined" &&
-    (location.hostname === "localhost" || location.hostname === "127.0.0.1");
-
-  // ✅ csak localban engedjük, deployban véletlen se
-    if (DEBUG_RULES_ENABLED && isLocalhost) {
-    return {
-      rows: DEBUG_RULES.rows,
-      cols: DEBUG_RULES.cols,
-      cellCounts: recomputeAllCellCounts(activeCards, DEBUG_RULES.rows, DEBUG_RULES.cols),
-        tries,
-    };
-  }
+      typeof location !== "undefined" &&
+      (location.hostname === "localhost" || location.hostname === "127.0.0.1");
 
     const rows = pickRules(rand, poolRows, 3);
     const cols = pickRules(rand, poolCols, 3);
@@ -663,4 +650,15 @@ export async function pickNonCollidingAsync(opts: PickNonCollidingOpts): Promise
     }
   }
   throw new Error("Rule generation failed (async)");
+}
+
+let banlistCooldown = 0;
+
+function isBanlistRule(r: Rule) {
+  return r.key === "banlist";
+}
+
+function canPickRule(r: Rule) {
+  if (isBanlistRule(r) && banlistCooldown > 0) return false;
+  return true;
 }

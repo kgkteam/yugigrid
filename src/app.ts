@@ -8,12 +8,12 @@ import {
   buildRulePools,
   matchesCell,
   pickNonCollidingAsync,
+  isSpellTrapDay,
   type Card,
   type Rule,
-} from "./engine";
+} from "./engine/engine";
 
-import { getSetYearByCode } from "./src/setYear";
-
+import { getSetYearByCode } from "./setYear";
 
 /* =========================
    IndexedDB cache (large)
@@ -151,6 +151,27 @@ function cardImageUrlById(id: string | number): string {
 }
 
 /* =========================
+   COMMUNITY % -> COLOR TIER
+   ========================= */
+
+// ✅ 0–5 zöld, 5–15 citromsárga, 15–25 narancs, 25+ piros
+type UsageTier = "green" | "lemon" | "orange" | "red";
+
+function usageTierFromPct(pct: number): UsageTier {
+  // pct lehet tizedes (pl. 12.3), ezért sima összehasonlítás
+  if (pct <= 5) return "green";
+  if (pct <= 15) return "lemon";
+  if (pct <= 25) return "orange";
+  return "red";
+}
+
+// ✅ 12.0 -> "12", 12.3 -> "12.3"
+function formatPct(pct: number): string {
+  const s = pct.toFixed(1);
+  return s.endsWith(".0") ? s.slice(0, -2) : s;
+}
+
+/* =========================
    RENDER
    ========================= */
 
@@ -203,13 +224,15 @@ function renderBoard(seedStr: string): void {
       if (card) {
         const small = cardImageUrlById(card.id);
         const pct = cellPickPct[r][c];
-        const tier = pct == null ? "" : pct >= 90 ? "hot" : pct <= 10 ? "low" : "mid";
+
+        // ✅ új tier logika (green/lemon/orange/red)
+        const tier: UsageTier | "" = pct == null ? "" : usageTierFromPct(pct);
 
         // ✅ BADGE KINT a cellában (nem a .cellCard-ban), így fixen ugyanott lesz
         cell.innerHTML = `
           ${
             pct != null
-              ? `<div class="usageBadge" data-tier="${tier}">${pct}%</div>`
+              ? `<div class="usageBadge" data-tier="${tier}">${formatPct(pct)}%</div>`
               : ""
           }
           <div class="cellCard">
@@ -303,9 +326,6 @@ function openPicker(seedStr: string, r: number, c: number): void {
 
   activeCell = { r, c };
 
-  // ❌ NINCS többé "used" szűrés
-  // a kártyák áthelyezését a pickCard() kezeli
-
   ACTIVE_CARDS = CARDS.filter((card) => {
     if (DAY_IS_SPELLTRAP) return card.kind !== "monster";
     return card.kind === "monster";
@@ -331,7 +351,6 @@ function closePicker(): void {
   if (modalBack) modalBack.style.display = "none";
   activeCell = null;
 }
-
 
 function renderList(q: string): void {
   if (!listEl) return;
@@ -437,7 +456,7 @@ async function pickCard(card: Card): Promise<void> {
   const colRule = colRules[c];
 
   const prev = findCardInGrid(card.id); // ha már le volt rakva, hol van?
-  const targetHadCard = !!grid[r][c];   // cél foglalt?
+  const targetHadCard = !!grid[r][c]; // cél foglalt?
   const ok = matchesCell(card, rowRule, colRule);
 
   // ✅ ha ugyanarra a cellára "pickelsz" ugyanazzal a lappal → ne csináljunk semmit
@@ -470,7 +489,7 @@ async function pickCard(card: Card): Promise<void> {
       return;
     }
 
-    // ✅ minden más rossz próbálkozás (üres cél / nem áthúzás / stb.)
+    // ✅ minden más rossz próbálkozás
     wrong[r][c] = true;
     cellPickPct[r][c] = null;
 
@@ -491,7 +510,7 @@ async function pickCard(card: Card): Promise<void> {
     cellPickPct[prev.r][prev.c] = null;
   }
 
-  // Cél cellába berakjuk (ha volt benne lap, azt felülírjuk)
+  // Cél cellába berakjuk
   grid[r][c] = card;
   wrong[r][c] = false;
   cellPickPct[r][c] = null;
@@ -512,6 +531,12 @@ async function pickCard(card: Card): Promise<void> {
 /* =========================
    COMMUNITY PICKS (GLOBAL via Netlify Blobs)
    ========================= */
+
+type GlobalStats = {
+  seed: string;
+  totals: Record<string, number>;
+  top3: Record<string, { cardId: number; cnt: number }[]>;
+};
 
 async function recordSubmit(seedStr: string): Promise<GlobalStats> {
   const picks: { cell: string; cardId: number }[] = [];
@@ -538,16 +563,8 @@ async function recordSubmit(seedStr: string): Promise<GlobalStats> {
     throw new Error("Submit failed: " + (data?.error || (await res.text())));
   }
 
-  // submit.ts most: { ok:true, seed, top3, totals }
   return data as GlobalStats;
 }
-
-
-type GlobalStats = {
-  seed: string;
-  totals: Record<string, number>;
-  top3: Record<string, { cardId: number; cnt: number }[]>;
-};
 
 async function fetchGlobalStats(seedStr: string): Promise<GlobalStats> {
   const res = await fetch(`/.netlify/functions/picks?seed=${encodeURIComponent(seedStr)}`, {
@@ -614,7 +631,6 @@ function refreshCellPickPctFromStats(st: GlobalStats): void {
   }
 }
 
-
 async function openResults(seedStr: string): Promise<void> {
   const back = $("resultBack");
   const out = $("resultList");
@@ -672,7 +688,7 @@ async function openResults(seedStr: string): Promise<void> {
             <div class="resTxt" style="min-width:0;">
               <div class="nm">${escapeHtml(card?.name || id)}</div>
             </div>
-            <div class="pctBadge">${pct}%</div>
+            <div class="pctBadge">${formatPct(pct)}%</div>
           `;
           cell.appendChild(row);
         }
@@ -711,7 +727,7 @@ function tick(): void {
 
 async function loadRules(): Promise<Rule[]> {
   setStatus("Loading rules...");
-  const res = await fetch("./rules.json", { cache: "no-store" });
+  const res = await fetch("/rules.json", { cache: "no-store" });
   if (!res.ok) throw new Error("rules.json not found");
   return (await res.json()) as Rule[];
 }
@@ -731,16 +747,13 @@ type YgoApiCard = Record<string, unknown> & {
   misc_info?: Array<{ tcg_date?: string; ocg_date?: string }>;
 
   card_sets?: Array<{
-  set_name?: string;
-  set_code: string;
-  set_rarity?: string;
-  set_rarity_code?: string;
-  set_price?: string;
-}>;
-
+    set_name?: string;
+    set_code: string;
+    set_rarity?: string;
+    set_rarity_code?: string;
+    set_price?: string;
+  }>;
 };
-
-
 
 async function loadCards(): Promise<YgoApiCard[]> {
   setStatus("Loading cards (API)...");
@@ -919,7 +932,6 @@ function normalizeCard(raw: YgoApiCard): Card {
   };
 }
 
-
 /* =========================
    UI wiring
    ========================= */
@@ -944,7 +956,8 @@ function updateCellBadge(r: number, c: number): void {
   const pct = cellPickPct[r][c];
   if (pct == null) return;
 
-  const tier = pct >= 90 ? "hot" : pct <= 10 ? "low" : "mid";
+  // ✅ új tier logika (green/lemon/orange/red)
+  const tier: UsageTier = usageTierFromPct(pct);
 
   // ✅ CSAK a cella közvetlen badge-ét keressük (ne descendant-et)
   let badge = cell.querySelector(":scope > .usageBadge") as HTMLElement | null;
@@ -957,7 +970,7 @@ function updateCellBadge(r: number, c: number): void {
   }
 
   badge.dataset.tier = tier;
-  badge.textContent = `${pct}%`;
+  badge.textContent = `${formatPct(pct)}%`;
 }
 
 function bindButtons(): void {
@@ -1025,14 +1038,12 @@ function bindButtons(): void {
           renderBoard(currentSeedStr);
 
           setStatus("✅ Saved!");
-          // ✅ results megnyitása (ha akarod)
-          void openResults(currentSeedStr); // vagy csinálunk openResultsFromStats(st)-t
+          void openResults(currentSeedStr);
         })
         .catch((e) => {
           console.error(e);
           setStatus("⚠️ Save failed (try later).");
         });
-
     };
   }
 }
@@ -1069,11 +1080,6 @@ window.__YG_DEBUG__ = {
 setInterval(tick, 250);
 window.__YG_CLEAR_CACHE__ = clearCardsCache;
 
-
-/* =========================
-   INIT
-   ========================= */
-
 async function init(): Promise<void> {
   const seedObj = dateSeed();
   const seedStr = seedObj.s;
@@ -1081,29 +1087,38 @@ async function init(): Promise<void> {
 
   bindButtons();
 
+  // ✅ Day-type döntés AZONNAL (ne villanjon Monster)
+  const base = (Number(seedStr) || 123456) >>> 0;
+
+  // ha az isSpellTrapDay fogad seed-et, használd azt, különben paraméter nélkül
+  const _isSpellTrapDay = isSpellTrapDay as any;
+  DAY_IS_SPELLTRAP =
+    typeof _isSpellTrapDay === "function"
+      ? (_isSpellTrapDay.length >= 1 ? !!_isSpellTrapDay(base) : !!_isSpellTrapDay())
+      : false;
+
+  // rendereld ki rögtön az elején, még a loadok előtt
+  renderDayType(DAY_IS_SPELLTRAP);
+
+  // --- innentől jöhetnek az async loadok ---
   RULE_POOL = await loadRules();
 
   const rawCards = await loadCards();
   CARDS = rawCards.map(normalizeCard);
   CARD_BY_ID = new Map(CARDS.map((c) => [String(c.id), c]));
 
-  const base = (Number(seedStr) || 123456) >>> 0;
+  // ✅ tedd ki a Chain oldalnak (önálló chain.html boot-hoz)
+  (window as any).__YUGIGRID_CARDS__ = CARDS;
+  (window as any).__YUGIGRID_RULES__ = RULE_POOL;
+
   const pools = buildRulePools(RULE_POOL);
   const rand = mulberry32(base);
 
-  // ideiglenesen maradhat random, de legalább létezzen
-  const isSpellTrap = rand() < 0.2;
-  DAY_IS_SPELLTRAP = isSpellTrap;
-  renderDayType(isSpellTrap);
+  const pool = DAY_IS_SPELLTRAP ? pools.spellTrapPool : pools.monsterPool;
 
-  const pool = isSpellTrap ? pools.spellTrapPool : pools.monsterPool;
-
-  const generationCards = CARDS.filter((card) => {
-    if (isSpellTrap) return card.kind !== "monster";
-    return card.kind === "monster";
-  });
-
-  // ======================
+  const generationCards = CARDS.filter((card) =>
+    DAY_IS_SPELLTRAP ? card.kind !== "monster" : card.kind === "monster"
+  );
 
   const res = await pickNonCollidingAsync({
     rand,
@@ -1124,7 +1139,7 @@ async function init(): Promise<void> {
   tick();
 }
 
-init().catch((e) => console.error(e));
-
-
-export {};
+init().catch((e) => {
+  console.error("INIT FAILED:", e);
+  setStatus("❌ Init failed");
+});

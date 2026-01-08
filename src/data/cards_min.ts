@@ -14955,7 +14955,7 @@ export const CARDS_MIN: Array<{ id: number; name: string }> = [
     "name": "El Shaddoll Apkallone"
   },
   {
-    "id": 20366274,
+    "id": 20366275,
     "name": "El Shaddoll Construct"
   },
   {

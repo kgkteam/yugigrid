@@ -1,2 +1,21 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
 [functions]
   directory = "netlify/functions"
+
+[[redirects]]
+  from = "/chain.html"
+  to = "/chain"
+  status = 200
+
+[[redirects]]
+  from = "/chain.html*"
+  to = "/chain"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

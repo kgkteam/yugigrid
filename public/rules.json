@@ -1,17 +1,4 @@
-[
-  { "key":"level", "op":"eq", "value":1, "label":"Level 1" },
-  { "key":"level", "op":"eq", "value":2, "label":"Level 2" },
-  { "key":"level", "op":"eq", "value":3, "label":"Level 3" },
-  { "key":"level", "op":"eq", "value":4, "label":"Level 4" },
-  { "key":"level", "op":"eq", "value":5, "label":"Level 5" },
-  { "key":"level", "op":"eq", "value":6, "label":"Level 6" },
-  { "key":"level", "op":"eq", "value":7, "label":"Level 7" },
-  { "key":"level", "op":"eq", "value":8, "label":"Level 8" },
-
-  { "key":"level", "op":"between", "value":1,"value2":2, "label":"Level 1-2" },
-  { "key":"level", "op":"between", "value":3,"value2":4, "label":"Level 3-4" },
-  { "key":"level", "op":"between", "value":5,"value2":6, "label":"Level 5-6" },
-  { "key":"level", "op":"between", "value":7,"value2":8, "label":"Level 7-8" },
+ [
 
   { "key":"monsterType", "op":"eq", "value":"WARRIOR", "label":"Warrior" },
   { "key":"monsterType", "op":"eq", "value":"SPELLCASTER", "label":"Spellcaster" },
@@ -109,9 +96,9 @@
   { "key":"DEF", "op":"lower", "value":2001, "label":"2000 DEF or lower" },
   { "key":"DEF", "op":"lower", "value":3001, "label":"3000 DEF or lower" },
   
-  { "key":"DEF", "op":"higher", "value":999, "label":"1000 DEF or lower" },
-  { "key":"DEF", "op":"higher", "value":1999, "label":"2000 DEF or lower" },
-  { "key":"DEF", "op":"higher", "value":2999, "label":"3000 DEF or lower" },
+  { "key":"DEF", "op":"higher", "value":999, "label":"1000 DEF or higher" },
+  { "key":"DEF", "op":"higher", "value":1999, "label":"2000 DEF or higher" },
+  { "key":"DEF", "op":"higher", "value":2999, "label":"3000 DEF or higher" },
 
   { "key":"ATK", "op":"between", "value":1000,"value2":2000, "label":"Has ATK between 1000-2000" },
   { "key":"ATK", "op":"between", "value":2000,"value2":3000, "label":"Has ATK between 2000-3000" },
