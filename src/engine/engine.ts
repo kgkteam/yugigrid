@@ -142,8 +142,9 @@ export function getSystemDayLabel(): string {
 }
 
 function isSpellOrTrap(card: Card | null | undefined): boolean {
-  return card?.type === "Spell Card" || card?.type === "Trap Card";
+  return card?.kind === "spell" || card?.kind === "trap";
 }
+
 
 /* =========================
    MATCHING

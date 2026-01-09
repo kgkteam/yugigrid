@@ -25,9 +25,9 @@ function randomName(): string {
   return `${a} ${n}`;
 }
 
+// ✅ ONLY local when running `netlify dev`
 function isLocalDev(): boolean {
-  // netlify dev / lokál
-  return !process.env.NETLIFY || process.env.CONTEXT === "dev";
+  return process.env.NETLIFY_DEV === "true" || process.env.NETLIFY_LOCAL === "true";
 }
 
 // ===== MOCK DATA (only local) =====
@@ -36,6 +36,16 @@ let MOCK_LIST: Entry[] = [
   { name: "Nova Wolf", points: 71, ts: Date.now() - 240000 },
   { name: "Crimson Hawk", points: 54, ts: Date.now() - 180000 },
 ];
+
+// ✅ sanitize + limit name length
+function cleanName(x: unknown): string | null {
+  const s = String(x ?? "").trim().replace(/\s+/g, " ");
+  if (!s) return null;
+  // allow simple chars
+  if (!/^[a-zA-Z0-9 _\-]+$/.test(s)) return null;
+  if (s.length < 3) return null;
+  return s.slice(0, 18);
+}
 
 export const handler: Handler = async (event) => {
   try {
@@ -62,7 +72,7 @@ export const handler: Handler = async (event) => {
           };
         }
 
-        const { points } = JSON.parse(event.body);
+        const { points, name } = JSON.parse(event.body);
         const p = Number(points);
 
         if (!Number.isFinite(p) || p < 0 || p > 999) {
@@ -73,8 +83,10 @@ export const handler: Handler = async (event) => {
           };
         }
 
+        const nm = cleanName(name) ?? randomName();
+
         MOCK_LIST.push({
-          name: randomName(),
+          name: nm,
           points: p,
           ts: Date.now(),
         });
@@ -125,7 +137,7 @@ export const handler: Handler = async (event) => {
         };
       }
 
-      const { points } = JSON.parse(event.body);
+      const { points, name } = JSON.parse(event.body);
       const p = Number(points);
 
       if (!Number.isFinite(p) || p < 0 || p > 999) {
@@ -139,8 +151,11 @@ export const handler: Handler = async (event) => {
       const data = (await store.get(key, { type: "json" })) as Top10 | null;
       const list: Entry[] = data?.list ? [...data.list] : [];
 
+      // ✅ use real name if provided, else Anonymous (no more random names in prod)
+      const nm = cleanName(name) ?? "Anonymous";
+
       list.push({
-        name: randomName(),
+        name: nm,
         points: p,
         ts: Date.now(),
       });
@@ -151,17 +166,14 @@ export const handler: Handler = async (event) => {
       });
 
       const trimmed = list.slice(0, 10);
-      const changed =
-        !data || JSON.stringify(trimmed) !== JSON.stringify(data.list);
 
-      if (changed) {
-        await store.set(key, JSON.stringify({ list: trimmed }));
-      }
+      // ✅ always persist latest top10 (simple + reliable)
+      await store.set(key, { list: trimmed });
 
       return {
         statusCode: 200,
         headers: JSON_HEADERS,
-        body: JSON.stringify({ ok: true, list: trimmed, changed }),
+        body: JSON.stringify({ ok: true, list: trimmed, changed: true }),
       };
     }
 
