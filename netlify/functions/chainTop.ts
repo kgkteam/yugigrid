@@ -7,7 +7,7 @@ const JSON_HEADERS: Record<string, string> = {
 };
 
 // ✅ bump this anytime you redeploy to verify the live function updated
-const VERSION = "chainTop-2026-01-09-v2";
+const VERSION = "chainTop-2026-01-09-v3";
 
 type Entry = {
   name: string;
@@ -49,76 +49,91 @@ function cleanName(x: unknown): string | null {
   return s.slice(0, 18);
 }
 
+// ✅ robust read: supports both stored JSON object and stored JSON string
+async function readTop10(store: ReturnType<typeof getStore>, key: string): Promise<Top10> {
+  const raw = (await store.get(key, { type: "json" })) as unknown;
+
+  if (!raw) return { list: [] };
+
+  // if stored as object {list:[]}
+  if (typeof raw === "object" && raw !== null && Array.isArray((raw as any).list)) {
+    return { list: (raw as any).list as Entry[] };
+  }
+
+  // if stored as JSON string (or something that got parsed weird)
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && Array.isArray(parsed.list)) return { list: parsed.list as Entry[] };
+    } catch {
+      // ignore
+    }
+  }
+
+  return { list: [] };
+}
+
 export const handler: Handler = async (event) => {
   try {
     const key = "top10_global";
 
-    // ✅ ADMIN: clear leaderboard (use once, then remove)
-    // Call: POST /.netlify/functions/chainTop with body:
-    // { "adminClear": true, "token": "<TOKEN>" }
-    //
-    // Also supports GET param ?adminClear=1&token=<TOKEN> for easier testing:
-    // https://yugigrid.com/.netlify/functions/chainTop?adminClear=1&token=...
+    /* =========================
+       ADMIN: CLEAR LEADERBOARD
+       =========================
+       - GET:  /.netlify/functions/chainTop?adminClear=1&token=...
+       - POST: /.netlify/functions/chainTop  body { "adminClear": true, "token":"..." }
+    */
     const ADMIN_TOKEN = process.env.CHAIN_ADMIN_TOKEN || "";
-
     const qs = event.queryStringParameters || {};
-    const wantsClearByGet =
+
+    const clearByGet =
       event.httpMethod === "GET" && (qs.adminClear === "1" || qs.adminClear === "true");
-    const wantsClearByPost = event.httpMethod === "POST" && !!event.body;
 
-    if (wantsClearByGet || wantsClearByPost) {
-      let token = "";
-
-      if (wantsClearByGet) {
-        token = String(qs.token || "");
-      } else {
-        try {
-          const body = JSON.parse(event.body || "{}");
-          if (body?.adminClear === true) token = String(body?.token || "");
-          else token = ""; // normal POST continues below
-          if (body?.adminClear !== true) token = "";
-        } catch {
-          token = "";
-        }
+    const clearByPost = event.httpMethod === "POST" && !!event.body && (() => {
+      try {
+        const body = JSON.parse(event.body || "{}");
+        return body?.adminClear === true;
+      } catch {
+        return false;
       }
+    })();
 
-      // Only run clear if explicitly requested
-      const clearRequested =
-        wantsClearByGet ||
-        (() => {
-          try {
-            const body = JSON.parse(event.body || "{}");
-            return body?.adminClear === true;
-          } catch {
-            return false;
-          }
-        })();
+    if (clearByGet || clearByPost) {
+      const token = clearByGet
+        ? String(qs.token || "")
+        : (() => {
+            try {
+              const body = JSON.parse(event.body || "{}");
+              return String(body?.token || "");
+            } catch {
+              return "";
+            }
+          })();
 
-      if (clearRequested) {
-        if (!ADMIN_TOKEN) {
-          return {
-            statusCode: 500,
-            headers: JSON_HEADERS,
-            body: JSON.stringify({ ok: false, error: "Admin token not configured", version: VERSION }),
-          };
-        }
-        if (!token || token !== ADMIN_TOKEN) {
-          return {
-            statusCode: 403,
-            headers: JSON_HEADERS,
-            body: JSON.stringify({ ok: false, error: "Forbidden", version: VERSION }),
-          };
-        }
-
-        const store = getStore("chain_leaderboard");
-        await store.delete(key);
-
+      if (!ADMIN_TOKEN) {
         return {
-          statusCode: 200,
+          statusCode: 500,
           headers: JSON_HEADERS,
-          body: JSON.stringify({ ok: true, cleared: true, version: VERSION }),
+          body: JSON.stringify({ ok: false, error: "Admin token not configured", version: VERSION }),
         };
       }
+
+      if (!token || token !== ADMIN_TOKEN) {
+        return {
+          statusCode: 403,
+          headers: JSON_HEADERS,
+          body: JSON.stringify({ ok: false, error: "Forbidden", version: VERSION }),
+        };
+      }
+
+      const store = getStore("chain_leaderboard");
+      await store.delete(key);
+
+      return {
+        statusCode: 200,
+        headers: JSON_HEADERS,
+        body: JSON.stringify({ ok: true, cleared: true, version: VERSION }),
+      };
     }
 
     /* =========================
@@ -154,14 +169,9 @@ export const handler: Handler = async (event) => {
         }
 
         const nm = cleanName(name) ?? randomName();
-
         MOCK_LIST.push({ name: nm, points: p, ts: Date.now() });
 
-        MOCK_LIST.sort((a, b) => {
-          if (b.points !== a.points) return b.points - a.points;
-          return a.ts - b.ts;
-        });
-
+        MOCK_LIST.sort((a, b) => (b.points - a.points) || (a.ts - b.ts));
         MOCK_LIST = MOCK_LIST.slice(0, 10);
 
         return {
@@ -185,11 +195,11 @@ export const handler: Handler = async (event) => {
 
     // GET -> top10
     if (event.httpMethod === "GET") {
-      const data = (await store.get(key, { type: "json" })) as Top10 | null;
+      const data = await readTop10(store, key);
       return {
         statusCode: 200,
         headers: JSON_HEADERS,
-        body: JSON.stringify({ version: VERSION, ...(data ?? { list: [] }) }),
+        body: JSON.stringify({ version: VERSION, ...data }),
       };
     }
 
@@ -214,30 +224,23 @@ export const handler: Handler = async (event) => {
         };
       }
 
-      const data = (await store.get(key, { type: "json" })) as Top10 | null;
-      const list: Entry[] = data?.list ? [...data.list] : [];
+      const data = await readTop10(store, key);
+      const list: Entry[] = Array.isArray(data.list) ? [...data.list] : [];
 
-      // ✅ use real name if provided, else Anonymous
       const nm = cleanName(name) ?? "Anonymous";
-
       list.push({ name: nm, points: p, ts: Date.now() });
 
-      list.sort((a, b) => {
-        if (b.points !== a.points) return b.points - a.points;
-        return a.ts - b.ts;
-      });
-
+      list.sort((a, b) => (b.points - a.points) || (a.ts - b.ts));
       const trimmed = list.slice(0, 10);
 
-      await store.set(key
+      // ✅ store as JSON STRING (TS-safe, Node-safe)
+      await store.set(key, JSON.stringify({ list: trimmed }));
 
-      const payload = new Blob(
-        [JSON.stringify({ list: trimmed })],
-        { type: "application/json" }
-      );
-
-      await store.set(key, payload);
-
+      return {
+        statusCode: 200,
+        headers: JSON_HEADERS,
+        body: JSON.stringify({ ok: true, list: trimmed, changed: true, version: VERSION }),
+      };
     }
 
     return {
