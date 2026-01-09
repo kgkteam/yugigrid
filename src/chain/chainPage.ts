@@ -19,8 +19,6 @@ root.innerHTML = `
         <div class="chainHeaderSlot"></div>
 
         <div class="chainBrand">
-          <div class="chainBrandTitle">Chain Mode</div>
-          <div class="chainBrandSub">Pick a card that matches BOTH rules. 30s per round.</div>
         </div>
 
         <a class="chainBackBtn" href="./index.html">← Back to Grid</a>
