@@ -51,6 +51,39 @@ export const handler: Handler = async (event) => {
   try {
     const key = "top10_global";
 
+    // ✅ ADMIN: clear leaderboard (use once, then remove)
+    // Call: POST /.netlify/functions/chainTop  with body { "adminClear": true, "token": "<TOKEN>" }
+    const ADMIN_TOKEN = process.env.CHAIN_ADMIN_TOKEN || "";
+
+    if (event.httpMethod === "POST" && event.body) {
+      const body = JSON.parse(event.body);
+      if (body?.adminClear === true) {
+        if (!ADMIN_TOKEN) {
+          return {
+            statusCode: 500,
+            headers: JSON_HEADERS,
+            body: JSON.stringify({ ok: false, error: "Admin token not configured" }),
+          };
+        }
+        if (String(body?.token || "") !== ADMIN_TOKEN) {
+          return {
+            statusCode: 403,
+            headers: JSON_HEADERS,
+            body: JSON.stringify({ ok: false, error: "Forbidden" }),
+          };
+        }
+
+        const store = getStore("chain_leaderboard");
+        await store.delete(key);
+
+        return {
+          statusCode: 200,
+          headers: JSON_HEADERS,
+          body: JSON.stringify({ ok: true, cleared: true }),
+        };
+      }
+    }
+
     /* =========================
        LOCAL DEV (MOCK)
        ========================= */
@@ -151,7 +184,7 @@ export const handler: Handler = async (event) => {
       const data = (await store.get(key, { type: "json" })) as Top10 | null;
       const list: Entry[] = data?.list ? [...data.list] : [];
 
-      // ✅ use real name if provided, else Anonymous (no more random names in prod)
+      // ✅ use real name if provided, else Anonymous
       const nm = cleanName(name) ?? "Anonymous";
 
       list.push({
