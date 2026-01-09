@@ -52,11 +52,11 @@ export async function loadAllCards(): Promise<Card[]> {
 
       atk: toNum(c.atk),
       def: toNum(c.def),
-      level: toNum(c.level),
+      level: !typeStr.includes("XYZ") && !typeStr.includes("Link") ? toNum(c.level) : null,
       rank: toNum(c.rank),
       linkRating: toNum(c.linkval ?? c.linkRating),
 
-      xyz: typeStr.includes("Xyz"),
+      xyz: typeStr.includes("XYZ"),
       fusion: typeStr.includes("Fusion"),
       synchro: typeStr.includes("Synchro"),
       link: typeStr.includes("Link"),
