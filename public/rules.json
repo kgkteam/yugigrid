@@ -176,10 +176,6 @@
   { "key":"synchro", "op":"eq", "value": true, "label":"Synchro Monster" },
   { "key":"fusion", "op":"eq", "value": true, "label":"Fusion Monster" },
 
-  { "key":"effect", "op":"eq", "value":false, "label":"Non-Effect Monster" },
-
-  { "key":"normal", "op":"eq", "value":true, "label":"Normal Monster" },
-
   { "key":"ritual", "op":"eq", "value":true, "label":"Ritual Monster" },
   { "key":"pendulum", "op":"eq", "value":true, "label":"Pendulum Monster" },
   { "key":"flip", "op":"eq", "value":true, "label":"Flip Monster" },
