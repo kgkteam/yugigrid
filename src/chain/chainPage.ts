@@ -940,7 +940,8 @@ function rememberLast(a: Rule, b: Rule) {
 function pickNextTwoRules(all: Rule[]) {
   if (DEBUG_RULES_ENABLED) {
     console.warn("[DEBUG] Using fixed chain rules");
-    return DEBUG_CHAIN_RULES;
+    //return DEBUG_CHAIN_RULES;
+    all=[DEBUG_CHAIN_RULES.a,DEBUG_CHAIN_RULES.b];
   }
 
   const MIN_SOL = 80;

@@ -61,7 +61,7 @@
   { "key":"desc", "op":"contains", "value":"End Phase", "label":"Mentions End Phase" },
   { "key":"desc", "op":"contains", "value":"Phase", "label":"Mentions any Phase" },
   { "key":"desc", "op":"contains", "value":"Cannot be Normal Summoned/Set", "label":"Cannot be Normal Summoned/Set" },
-  { "key":"desc", "op":"contains", "value":"Special Summon this", "value2":"Must be Special Summoned by", "label":"Special Summons itself" },
+  { "key":"desc", "op":"contains", "value":"Special Summon this", "value2":"Must be Special Summoned", "label":"Special Summons itself" },
   { "key":"desc", "op":"contains", "value":";", "label":"Has a cost" },
   { "key":"desc", "op":"contains", "value":"Face-Down", "label":"Mentions Face-Down" },
   { "key":"desc", "op":"contains", "value":"piercing", "label":"Mentions piercing" },
