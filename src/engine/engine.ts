@@ -360,7 +360,15 @@ export function matches(card: Card, rule: Rule): boolean {
       .filter(Boolean)
       .map(v => String(v).toLowerCase());
 
-    return values.some(val => t.includes(val));
+    let ret =  values.some(val => t.includes(val));
+    if (!ret){
+      console.log ("false because");
+      console.log ("t: " + t);
+      console.log ("value: "  + value);
+      console.log ("value2: "  + value2);
+      console.log ("value3: "  + value3);
+    }
+    return ret;
   }
 
   return false;
@@ -542,7 +550,16 @@ function rulesCompatibleSimple(a: Rule, b: Rule): boolean {
   if (a.key === "level" && b.key === "level") {
     const ia = levelInterval(a);
     const ib = levelInterval(b);
-    if (ia && ib && !intervalsOverlap(ia, ib)) return false;
+    if (ia && ib && !intervalsOverlap(ia, ib)) {
+      console.log ("false because");
+      console.log ("a.value: " + a.value);
+      console.log ("a.value2: " + a.value2);
+      console.log ("ia: "  + ia);
+      console.log ("ib: "  + ib);
+      
+      return false;
+    }
+
   }
 
   if (a.key === "ATK" && b.key === "ATK") {
