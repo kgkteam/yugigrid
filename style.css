@@ -218,7 +218,7 @@ button.pill.pillBtn{
   gap: var(--sideGap);
 
   width: fit-content;
-  margin: 40px auto 0;
+  margin: 18px auto 0; /* ✅ volt 40px */
 }
 
 .corner{ grid-column: 1; grid-row: 1; }
