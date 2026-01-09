@@ -170,7 +170,7 @@ export const handler: Handler = async (event) => {
         }
 
         const p = Number(body?.points);
-        if (!Number.isFinite(p) || p < 0 || p > 999) return bad(400, "Invalid points");
+        if (!Number.isFinite(p) || p < 0 || p > 9999999999999999999) return bad(400, "Invalid points");
 
         const nm = cleanName(body?.name) ?? randomName();
         MOCK_LIST.push({ name: nm, points: p, ts: Date.now() });
@@ -248,7 +248,7 @@ export const handler: Handler = async (event) => {
       }
 
       const p = Number(body?.points);
-      if (!Number.isFinite(p) || p < 0 || p > 999) return bad(400, "Invalid points");
+      if (!Number.isFinite(p) || p < 0 || p > 9999999999999999999999) return bad(400, "Invalid points");
 
       try {
         const data = await readTop10(store, key);
