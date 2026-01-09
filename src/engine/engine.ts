@@ -363,13 +363,6 @@ export function matches(card: Card, rule: Rule): boolean {
       .map(v => String(v).toLowerCase());
 
     let ret =  values.some(val => t.includes(val));
-    if (!ret){
-      console.log ("false because");
-      console.log ("t: " + t);
-      console.log ("value: "  + value);
-      console.log ("value2: "  + value2);
-      console.log ("value3: "  + value3);
-    }
     return ret;
   }
 
