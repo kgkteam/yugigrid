@@ -381,6 +381,12 @@ export function matches(card: Card, rule: Rule): boolean {
   return false;
 }
 
+export async function loadRules(): Promise<Rule[]> {
+  const res = await fetch("/rules.json", { cache: "no-store" });
+  if (!res.ok) throw new Error("rules.json not found");
+  return (await res.json()) as Rule[];
+}
+
 export function matchesCell(card: Card, rowRule: Rule, colRule: Rule): boolean {
   return matches(card, rowRule) && matches(card, colRule);
 }

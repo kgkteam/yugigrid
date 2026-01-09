@@ -1,6 +1,6 @@
 // chainPage.ts — Chain Mode page logic (START button + help text in popup + end screen + Top10 name pick + NEW highlight)
 import type { Card, Rule } from "../engine/engine";
-import { mulberry32, dateSeed, matches, rulesCompatible } from "../engine/engine";
+import { mulberry32, dateSeed, matches, rulesCompatible, loadRules } from "../engine/engine";
 import { loadAllCards } from "../data/loadAllCards";
 import { DEBUG_RULES_ENABLED, DEBUG_CHAIN_RULES } from "../debugRules";
 
@@ -796,26 +796,6 @@ function normLabel(x: unknown): string {
    ========================= */
 
 const RULES_LS_KEY = "yugigrid_rules_cache_v1";
-
-async function loadRules(): Promise<Rule[]> {
-  try {
-    const cached = localStorage.getItem(RULES_LS_KEY);
-    if (cached) {
-      const parsed = JSON.parse(cached);
-      if (Array.isArray(parsed) && parsed.length) return parsed as Rule[];
-    }
-  } catch {}
-
-  const res = await fetch("/rules.json", { cache: "no-store" });
-  if (!res.ok) throw new Error("rules.json not found");
-  const rules = (await res.json()) as Rule[];
-
-  try {
-    localStorage.setItem(RULES_LS_KEY, JSON.stringify(rules));
-  } catch {}
-
-  return rules;
-}
 
 /* =========================
    RNG

@@ -9,6 +9,7 @@ import {
   matchesCell,
   pickNonCollidingAsync,
   isSpellTrapDay,
+  loadRules,
   type Card,
   type Rule,
 } from "./engine/engine";
@@ -725,13 +726,6 @@ function tick(): void {
    LOADERS
    ========================= */
 
-async function loadRules(): Promise<Rule[]> {
-  setStatus("Loading rules...");
-  const res = await fetch("/rules.json", { cache: "no-store" });
-  if (!res.ok) throw new Error("rules.json not found");
-  return (await res.json()) as Rule[];
-}
-
 type YgoApiCard = Record<string, unknown> & {
   id: number;
   name: string;
@@ -1102,6 +1096,7 @@ async function init(): Promise<void> {
   renderDayType(DAY_IS_SPELLTRAP);
 
   // --- innentől jöhetnek az async loadok ---
+  setStatus("Loading rules...");
   RULE_POOL = await loadRules();
 
   const rawCards = await loadCards();
