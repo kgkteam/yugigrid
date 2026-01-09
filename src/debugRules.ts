@@ -7,7 +7,7 @@ import type { Rule } from "./engine";
    DEBUG FLAG
    ========================= */
 
-export const DEBUG_RULES_ENABLED = true; // ⬅️ false prod előtt
+export const DEBUG_RULES_ENABLED = false; // ⬅️ false prod előtt
 
 /* =========================
    FIX RULE PAIRS (Chain Mode)

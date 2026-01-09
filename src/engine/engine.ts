@@ -368,7 +368,7 @@ export function matches(card: Card, rule: Rule): boolean {
       .map(v => String(v).toLowerCase());
 
     let ret =  values.some(val => t.includes(val));
-    if (!ret && card.id === 33420078){
+    if (!ret){
       console.log ("false because");
       console.log ("t: " + t);
       console.log ("value: "  + value);
