@@ -4,7 +4,7 @@ import { mulberry32, dateSeed, matches, rulesCompatible } from "../engine/engine
 import { loadAllCards } from "../data/loadAllCards";
 
 console.log(
-  "CHAINPAGE VERSION: LEVELFIX-FINAL+SIGFIX+RECENT5+SCORE+FIRSTTRY+ANIM+TOPSTATUS+USEDPTS+SHAKE+GLOBALTOP10-SEPARATEPANEL+CENTERLOCK+TOP10FIX-v1"
+  "CHAINPAGE VERSION: LEVELFIX-FINAL+SIGFIX+RECENT5+SCORE+FIRSTTRY+ANIM+TOPSTATUS+USEDPTS+SHAKE+GLOBALTOP10-SEPARATEPANEL+CENTERLOCK+TOP10FIX+NAMEPICK-v1"
 );
 
 /* =========================
@@ -133,7 +133,7 @@ root.innerHTML = `
 `;
 
 /* =========================
-   CSS (anim + shake + separate top panel + center lock)
+   CSS (anim + shake + separate top panel + center lock + modal)
    ========================= */
 
 const style = document.createElement("style");
@@ -169,29 +169,19 @@ style.textContent = `
   .chainStageInner{
     width: 100%;
     display: grid;
-
-    /* left spacer | main | right panel  */
     grid-template-columns: 340px minmax(560px, 680px) 340px;
-
     gap: 16px;
     align-items: start;
     justify-content: center;
   }
 
-  .chainLeftSpacer{
-    grid-column: 1;
-  }
-
-  .chainPanel{
-    grid-column: 2;
-    min-width: 0;
-  }
+  .chainLeftSpacer{ grid-column: 1; }
+  .chainPanel{ grid-column: 2; min-width: 0; }
 
   .chainTopPanel{
     grid-column: 3;
     position: sticky;
     top: 16px;
-
     border: 1px solid rgba(255,255,255,.12);
     background: rgba(255,255,255,.04);
     border-radius: 16px;
@@ -200,11 +190,8 @@ style.textContent = `
     align-self: start;
   }
 
-  /* On smaller screens: hide spacer+right panel and let main be full width */
   @media (max-width: 1100px){
-    .chainStageInner{
-      grid-template-columns: 1fr;
-    }
+    .chainStageInner{ grid-template-columns: 1fr; }
     .chainLeftSpacer{ display:none; }
     .chainTopPanel{ display:none; }
     .chainPanel{ grid-column: 1; }
@@ -218,11 +205,7 @@ style.textContent = `
     margin-bottom: 10px;
   }
 
-  .chainTopPanelTitle{
-    font-size: 13px;
-    font-weight: 900;
-    opacity: .9;
-  }
+  .chainTopPanelTitle{ font-size: 13px; font-weight: 900; opacity: .9; }
 
   .chainTopPanelBtn{
     border: 1px solid rgba(255,255,255,.12);
@@ -235,16 +218,9 @@ style.textContent = `
     font-size: 12px;
     opacity: .9;
   }
-  .chainTopPanelBtn:hover{
-    background: rgba(255,255,255,.10);
-  }
+  .chainTopPanelBtn:hover{ background: rgba(255,255,255,.10); }
 
-  .chainTopPanelList{
-    margin: 0;
-    padding-left: 18px;
-    font-size: 13px;
-  }
-
+  .chainTopPanelList{ margin: 0; padding-left: 18px; font-size: 13px; }
   .chainTopPanelList li{
     margin-bottom: 6px;
     opacity: .95;
@@ -253,15 +229,74 @@ style.textContent = `
     text-overflow: ellipsis;
   }
 
-  .chainTopPanelFoot{
+  .chainTopPanelFoot{ margin-top: 10px; }
+  .chainTopPanelHint{ font-size: 11px; opacity: .65; font-weight: 900; }
+
+  /* ===== Name pick modal ===== */
+  .lbModalOverlay{
+    position:fixed; inset:0; z-index:9999;
+    background: rgba(0,0,0,.62);
+    display:flex; align-items:center; justify-content:center;
+    padding: 20px;
+  }
+  .lbModal{
+    width: min(520px, 100%);
+    border: 1px solid rgba(255,255,255,.14);
+    background: rgba(20,20,26,.92);
+    border-radius: 18px;
+    padding: 16px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 12px 40px rgba(0,0,0,.35);
+  }
+  .lbModalTitle{
+    font-weight: 950;
+    font-size: 16px;
+    margin-bottom: 6px;
+  }
+  .lbModalSub{
+    opacity: .8;
+    font-weight: 900;
+    font-size: 12px;
+    margin-bottom: 12px;
+    line-height: 1.35;
+  }
+  .lbNameGrid{
+    display:grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
     margin-top: 10px;
   }
-
-  .chainTopPanelHint{
-    font-size: 11px;
-    opacity: .65;
-    font-weight: 900;
+  @media(min-width: 520px){
+    .lbNameGrid{ grid-template-columns: 1fr 1fr; }
   }
+  .lbNameBtn{
+    border: 1px solid rgba(255,255,255,.14);
+    background: rgba(255,255,255,.06);
+    color: inherit;
+    padding: 10px 12px;
+    border-radius: 14px;
+    cursor: pointer;
+    font-weight: 950;
+    text-align: left;
+    transition: transform .06s ease, background .12s ease;
+  }
+  .lbNameBtn:hover{ background: rgba(255,255,255,.10); }
+  .lbNameBtn:active{ transform: scale(.99); }
+  .lbModalActions{
+    display:flex; justify-content:flex-end; gap:10px;
+    margin-top: 14px;
+  }
+  .lbCancelBtn{
+    border: 1px solid rgba(255,255,255,.14);
+    background: transparent;
+    color: inherit;
+    padding: 8px 12px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 950;
+    opacity: .85;
+  }
+  .lbCancelBtn:hover{ background: rgba(255,255,255,.06); }
 `;
 document.head.appendChild(style);
 
@@ -275,22 +310,21 @@ let CARD_NAME_LOWER: string[] = [];
 
 let CARD_BY_ID = new Map<string, Card>();
 
-// ruleSig -> sorted list of card indexes that match the single rule
 const RULE_MATCH_CACHE = new Map<string, Uint32Array>();
 
-let streak = 0; // FIRST-TRY streak
+let streak = 0;
 let ruleA: Rule | null = null;
 let ruleB: Rule | null = null;
 
 let score = 0;
-let award = 100; // current round award, halves on wrong answers (min 1)
+let award = 100;
 let wrongThisRound = 0;
 
 type UsedEntry = { card: Card; pts: number };
 const USED_LIMIT = 5;
 let usedEntries: UsedEntry[] = [];
 
-let gameEnded = false; // prevents double-submit
+let gameEnded = false;
 
 const inputEl = document.getElementById("chainInput") as HTMLInputElement;
 const dropEl = document.getElementById("chainDrop") as HTMLDivElement;
@@ -309,11 +343,10 @@ const usedWrapEl = document.getElementById("chainUsedWrap") as HTMLDivElement | 
 const usedEl = document.getElementById("chainUsed") as HTMLDivElement | null;
 
 const topStatusEl = document.getElementById("chainTopStatus") as HTMLDivElement;
-
 const top10ListEl = document.getElementById("top10List") as HTMLOListElement | null;
 
 /* =========================
-   GLOBAL TOP10 (Netlify Function) — FIXED
+   GLOBAL TOP10 (Netlify Function) — FIXED + NAME PICK
    ========================= */
 
 async function fetchJsonSafe(url: string, init?: RequestInit) {
@@ -326,7 +359,6 @@ async function fetchJsonSafe(url: string, init?: RequestInit) {
     throw new Error(`HTTP ${res.status} ${res.statusText}: ${text.slice(0, 140)}`);
   }
 
-  // Catches redirects/catch-all returning HTML
   if (!ct.includes("application/json")) {
     throw new Error(`Expected JSON, got "${ct}". First chars: ${text.slice(0, 80)}`);
   }
@@ -356,8 +388,6 @@ function renderTop10(list: Array<{ name: string; points: number }>) {
 
 async function loadTop10() {
   if (!top10ListEl) return;
-
-  // ✅ never leave it blank
   top10ListEl.innerHTML = "<li>Loading…</li>";
 
   try {
@@ -370,8 +400,78 @@ async function loadTop10() {
   }
 }
 
-async function submitPoints(points: number) {
-  // ✅ always refresh leaderboard after game ends, even if 0
+const ADJ = ["Lucky", "Silent", "Rapid", "Golden", "Brave", "Cosmic", "Nova", "Icy", "Crimson", "Arcane"];
+const NOUN = ["Fox", "Wolf", "Panda", "Hawk", "Otter", "Tiger", "Raven", "Lynx", "Viper", "Koala"];
+
+function randomName(): string {
+  const a = ADJ[Math.floor(Math.random() * ADJ.length)];
+  const n = NOUN[Math.floor(Math.random() * NOUN.length)];
+  return `${a} ${n}`;
+}
+
+function uniqueNames(n: number): string[] {
+  const set = new Set<string>();
+  while (set.size < n) set.add(randomName());
+  return [...set];
+}
+
+function pickNameModal(finalScore: number): Promise<string | null> {
+  const names = uniqueNames(5);
+
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "lbModalOverlay";
+
+    const modal = document.createElement("div");
+    modal.className = "lbModal";
+
+    modal.innerHTML = `
+      <div class="lbModalTitle">🏆 Congrats! You made the Global Top 10</div>
+      <div class="lbModalSub">
+        Your score: <b>${finalScore}</b><br/>
+        Choose a name (you’ll appear with this on the leaderboard):
+      </div>
+      <div class="lbNameGrid" id="lbNameGrid"></div>
+      <div class="lbModalActions">
+        <button class="lbCancelBtn" id="lbCancelBtn" type="button">Skip</button>
+      </div>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    const grid = modal.querySelector("#lbNameGrid") as HTMLDivElement;
+    const cancel = modal.querySelector("#lbCancelBtn") as HTMLButtonElement;
+
+    const cleanup = () => overlay.remove();
+
+    cancel.onclick = () => {
+      cleanup();
+      resolve(null);
+    };
+
+    overlay.addEventListener("mousedown", (e) => {
+      if (e.target === overlay) {
+        cleanup();
+        resolve(null);
+      }
+    });
+
+    for (const nm of names) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "lbNameBtn";
+      btn.textContent = nm;
+      btn.onclick = () => {
+        cleanup();
+        resolve(nm);
+      };
+      grid.appendChild(btn);
+    }
+  });
+}
+
+async function submitPoints(points: number, name?: string | null) {
   const shouldSubmit = Number.isFinite(points) && points > 0;
 
   try {
@@ -379,7 +479,7 @@ async function submitPoints(points: number) {
       await fetchJsonSafe("/.netlify/functions/chainTop", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ points }),
+        body: JSON.stringify({ points, name: name ?? undefined }),
       });
     }
   } catch (err) {
@@ -387,6 +487,13 @@ async function submitPoints(points: number) {
   }
 
   await loadTop10();
+}
+
+function qualifiesForTop10(points: number, list: Array<{ points: number }>): boolean {
+  if (!Number.isFinite(points) || points <= 0) return false;
+  if (!list || list.length < 10) return true;
+  const min = Math.min(...list.map((e) => Number(e.points) || 0));
+  return points > min; // strict better than 10th place
 }
 
 async function endGame(reason: "time" | "giveup") {
@@ -407,11 +514,25 @@ async function endGame(reason: "time" | "giveup") {
 
   setMsg("");
 
-  // ✅ submit score to global top10 (and always refresh)
+  // ✅ end flow:
+  // - fetch current top10
+  // - if you qualify, show congrats + pick 1 of 5 names
+  // - submit with chosen name
+  // - always refresh
   try {
-    await submitPoints(score);
+    const cur = await fetchJsonSafe("/.netlify/functions/chainTop");
+    const list = (cur?.list ?? []) as Array<{ name: string; points: number }>;
+
+    let chosenName: string | null = null;
+    if (qualifiesForTop10(score, list)) {
+      chosenName = await pickNameModal(score);
+      // If skipped, avoid Anonymous by assigning a random name
+      if (!chosenName) chosenName = randomName();
+    }
+
+    await submitPoints(score, chosenName);
   } catch (e) {
-    console.error("[Top10] endGame submitPoints crashed:", e);
+    console.error("[Top10] endGame flow failed:", e);
     try {
       await loadTop10();
     } catch {}
@@ -879,7 +1000,7 @@ function startTimer() {
   updateTimerUI(time, 30);
 
   timer = window.setInterval(() => {
-    if (gameEnded) return; // safety
+    if (gameEnded) return;
     time--;
     updateTimerUI(time, 30);
 
@@ -974,7 +1095,6 @@ function pickById(id: string) {
     return;
   }
 
-  // ✅ CORRECT
   setScore(score + award);
 
   usedEntries.push({ card, pts: award });
@@ -1107,7 +1227,6 @@ async function init() {
     inputEl.disabled = true;
     updateTimerUI(30, 30);
 
-    // Load global top10 ASAP (doesn't block init)
     void loadTop10();
 
     CARDS = await loadAllCards();
