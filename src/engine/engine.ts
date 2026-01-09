@@ -37,6 +37,7 @@ export interface Rule {
   op?: RuleOp;
   value?: unknown;
   value2?: unknown;
+  value3?: unknown;
   label?: string;
 }
 
@@ -287,6 +288,7 @@ export function matches(card: Card, rule: Rule): boolean {
   const op = rule.op;
   const value = rule.value;
   const value2 = rule.value2;
+  const value3= rule.value3;
 
   // ✅ setYear: v = number[]
   if (Array.isArray(v)) {
@@ -294,6 +296,7 @@ export function matches(card: Card, rule: Rule): boolean {
 
     const v1 = typeof value === "number" ? value : Number(value);
     const v2 = typeof value2 === "number" ? value2 : Number(value2);
+    const v3 = typeof value3 === "number" ? value3 : Number(value3);
 
     return years.some((y) => {
       const year = typeof y === "number" ? y : Number(y);
@@ -323,6 +326,7 @@ export function matches(card: Card, rule: Rule): boolean {
   const vn = toNum(v);
   const n1 = toNum(value);
   const n2 = toNum(value2);
+  const n3 = toNum(value3);
 
   if (op === "eq") {
     if (Number.isFinite(vn) && Number.isFinite(n1)) return vn === n1;
@@ -349,10 +353,14 @@ export function matches(card: Card, rule: Rule): boolean {
 
   if (op === "contains") {
     if (typeof v !== "string") return false;
+
     const t = v.toLowerCase();
-    const vv1 = String(value ?? "").toLowerCase();
-    const vv2 = value2 ? String(value2).toLowerCase() : null;
-    return vv2 ? t.includes(vv1) || t.includes(vv2) : t.includes(vv1);
+
+    const values = [value, value2, value3]
+      .filter(Boolean)
+      .map(v => String(v).toLowerCase());
+
+    return values.some(val => t.includes(val));
   }
 
   return false;
@@ -481,7 +489,7 @@ function numInterval(rule: Rule, key: string): [number, number] | null {
 function rulesCompatibleSimple(a: Rule, b: Rule): boolean {
   if (!a || !b) return false;
 
-  if (a.key === b.key && a.op === b.op && a.value === b.value && a.value2 === b.value2) return false;
+  if (a.key === b.key && a.op === b.op && a.value === b.value && a.value2 === b.value2 && a.value3 === b.value3)  return false;
 
   if (a.key === "desc" || b.key === "desc") {
     return a.value !== b.value;
