@@ -6,14 +6,37 @@
 
   <title>YugiGrid – Chain</title>
 
+  <!-- FAVICON (ugyanaz, mint a Grid oldalon) -->
+  <link rel="stylesheet" href="./style.css" />
+  <link rel="icon" type="image/png" href="/favicon.png?v=3" />
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title>YugiGrid – Chain</title>
+
   <!-- Favicon (same as Grid) -->
   <link rel="icon" type="image/png" href="/favicon.png?v=3" />
 
-  <!-- Chain entry (Vite build output) -->
+  <!-- Chain entry (Vite build) -->
   <script type="module" crossorigin src="/assets/chain-Dlax0pDZ.js"></script>
 </head>
 
 <body class="chain-mode">
   <div id="chainRoot"></div>
+</body>
+</html>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body class="chain-mode">
+  <div id="chainRoot"></div>
+
+  <!-- CSAK ITT legyen -->
+  <script type="module" src="/src/chain/chain.entry.ts"></script>
 </body>
 </html>
