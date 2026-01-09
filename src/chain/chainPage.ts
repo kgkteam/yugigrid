@@ -4,7 +4,7 @@ import { mulberry32, dateSeed, matches, rulesCompatible } from "../engine/engine
 import { loadAllCards } from "../data/loadAllCards";
 
 console.log(
-  "CHAINPAGE VERSION: LEVELFIX-FINAL+SIGFIX+RECENT5+SCORE+FIRSTTRY+ANIM+TOPSTATUS+USEDPTS+SHAKE+GLOBALTOP10-SEPARATEPANEL+CENTERLOCK"
+  "CHAINPAGE VERSION: LEVELFIX-FINAL+SIGFIX+RECENT5+SCORE+FIRSTTRY+ANIM+TOPSTATUS+USEDPTS+SHAKE+GLOBALTOP10-SEPARATEPANEL+CENTERLOCK+TOP10FIX-v1"
 );
 
 /* =========================
@@ -313,50 +313,83 @@ const topStatusEl = document.getElementById("chainTopStatus") as HTMLDivElement;
 const top10ListEl = document.getElementById("top10List") as HTMLOListElement | null;
 
 /* =========================
-   GLOBAL TOP10 (Netlify Function)
+   GLOBAL TOP10 (Netlify Function) — FIXED
    ========================= */
+
+async function fetchJsonSafe(url: string, init?: RequestInit) {
+  const res = await fetch(url, { cache: "no-store", ...(init || {}) });
+
+  const ct = (res.headers.get("content-type") || "").toLowerCase();
+  const text = await res.text();
+
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status} ${res.statusText}: ${text.slice(0, 140)}`);
+  }
+
+  // Catches redirects/catch-all returning HTML
+  if (!ct.includes("application/json")) {
+    throw new Error(`Expected JSON, got "${ct}". First chars: ${text.slice(0, 80)}`);
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    throw new Error(`Bad JSON: ${(e as any)?.message ?? e} | First chars: ${text.slice(0, 80)}`);
+  }
+}
+
+function renderTop10(list: Array<{ name: string; points: number }>) {
+  if (!top10ListEl) return;
+
+  if (!list || list.length === 0) {
+    top10ListEl.innerHTML = "<li>—</li>";
+    return;
+  }
+
+  top10ListEl.innerHTML = "";
+  for (const e of list) {
+    const li = document.createElement("li");
+    li.textContent = `${e.name} — ${e.points}`;
+    top10ListEl.appendChild(li);
+  }
+}
 
 async function loadTop10() {
   if (!top10ListEl) return;
-  top10ListEl.innerHTML = "";
+
+  // ✅ never leave it blank
+  top10ListEl.innerHTML = "<li>Loading…</li>";
 
   try {
-    const r = await fetch("/.netlify/functions/chainTop", { cache: "no-store" });
-    const data = await r.json();
+    const data = await fetchJsonSafe("/.netlify/functions/chainTop");
     const list = (data?.list ?? []) as Array<{ name: string; points: number }>;
-
-    if (!list.length) {
-      top10ListEl.innerHTML = "<li>—</li>";
-      return;
-    }
-
-    for (const e of list) {
-      const li = document.createElement("li");
-      li.textContent = `${e.name} — ${e.points}`;
-      top10ListEl.appendChild(li);
-    }
-  } catch {
+    renderTop10(list);
+  } catch (err) {
+    console.error("[Top10] load failed:", err);
     top10ListEl.innerHTML = "<li>—</li>";
   }
 }
 
 async function submitPoints(points: number) {
-  if (!Number.isFinite(points) || points <= 0) return; // don't submit 0
+  // ✅ always refresh leaderboard after game ends, even if 0
+  const shouldSubmit = Number.isFinite(points) && points > 0;
 
   try {
-    await fetch("/.netlify/functions/chainTop", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ points }),
-    });
-  } catch {
-    // ignore
-  } finally {
-    loadTop10();
+    if (shouldSubmit) {
+      await fetchJsonSafe("/.netlify/functions/chainTop", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ points }),
+      });
+    }
+  } catch (err) {
+    console.error("[Top10] submit failed:", err);
   }
+
+  await loadTop10();
 }
 
-function endGame(reason: "time" | "giveup") {
+async function endGame(reason: "time" | "giveup") {
   if (gameEnded) return;
   gameEnded = true;
 
@@ -374,8 +407,15 @@ function endGame(reason: "time" | "giveup") {
 
   setMsg("");
 
-  // ✅ submit score to global top10
-  submitPoints(score);
+  // ✅ submit score to global top10 (and always refresh)
+  try {
+    await submitPoints(score);
+  } catch (e) {
+    console.error("[Top10] endGame submitPoints crashed:", e);
+    try {
+      await loadTop10();
+    } catch {}
+  }
 }
 
 /* =========================
@@ -839,11 +879,12 @@ function startTimer() {
   updateTimerUI(time, 30);
 
   timer = window.setInterval(() => {
+    if (gameEnded) return; // safety
     time--;
     updateTimerUI(time, 30);
 
     if (time <= 0) {
-      endGame("time");
+      void endGame("time");
     }
   }, 1000);
 }
@@ -1045,11 +1086,11 @@ document.addEventListener("click", (e) => {
 });
 
 (document.getElementById("chainGiveUp") as HTMLButtonElement).addEventListener("click", () => {
-  endGame("giveup");
+  void endGame("giveup");
 });
 
 document.getElementById("lbRefresh")?.addEventListener("click", () => {
-  loadTop10();
+  void loadTop10();
 });
 
 /* =========================
@@ -1067,7 +1108,7 @@ async function init() {
     updateTimerUI(30, 30);
 
     // Load global top10 ASAP (doesn't block init)
-    loadTop10();
+    void loadTop10();
 
     CARDS = await loadAllCards();
     RULES = await loadRules();

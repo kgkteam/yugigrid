@@ -1,13 +1,18 @@
+// netlify/functions/chainTop.ts
 import type { Handler } from "@netlify/functions";
 import { getStore } from "@netlify/blobs";
 
 const JSON_HEADERS: Record<string, string> = {
-  "content-type": "application/json",
+  "content-type": "application/json; charset=utf-8",
   "cache-control": "no-store",
+  // ✅ safe even if same-origin; also prevents random CORS/preflight pain
+  "access-control-allow-origin": "*",
+  "access-control-allow-headers": "content-type",
+  "access-control-allow-methods": "GET,POST,OPTIONS",
 };
 
 // ✅ bump this anytime you redeploy to verify the live function updated
-const VERSION = "chainTop-2026-01-09-v4";
+const VERSION = "chainTop-2026-01-09-v5";
 
 type Entry = {
   name: string;
@@ -87,8 +92,27 @@ async function readTop10(store: ReturnType<typeof getStore>, key: string): Promi
   }
 }
 
+function ok(body: any) {
+  return {
+    statusCode: 200,
+    headers: JSON_HEADERS,
+    body: JSON.stringify({ ok: true, version: VERSION, ...body }),
+  };
+}
+
+function bad(statusCode: number, error: string) {
+  return {
+    statusCode,
+    headers: JSON_HEADERS,
+    body: JSON.stringify({ ok: false, version: VERSION, error }),
+  };
+}
+
 export const handler: Handler = async (event) => {
   try {
+    // ✅ handle preflight (some browsers/tools do this)
+    if (event.httpMethod === "OPTIONS") return ok({});
+
     // ✅ QUICK WIPE OPTION:
     // Change this key to instantly "reset" the leaderboard without fighting old stored data.
     // Example: "top10_global_v2"
@@ -130,30 +154,13 @@ export const handler: Handler = async (event) => {
             }
           })();
 
-      if (!ADMIN_TOKEN) {
-        return {
-          statusCode: 500,
-          headers: JSON_HEADERS,
-          body: JSON.stringify({ ok: false, error: "Admin token not configured", version: VERSION }),
-        };
-      }
-
-      if (!token || token !== ADMIN_TOKEN) {
-        return {
-          statusCode: 403,
-          headers: JSON_HEADERS,
-          body: JSON.stringify({ ok: false, error: "Forbidden", version: VERSION }),
-        };
-      }
+      if (!ADMIN_TOKEN) return bad(500, "Admin token not configured");
+      if (!token || token !== ADMIN_TOKEN) return bad(403, "Forbidden");
 
       const store = getStore("chain_leaderboard");
       await store.delete(key);
 
-      return {
-        statusCode: 200,
-        headers: JSON_HEADERS,
-        body: JSON.stringify({ ok: true, cleared: true, version: VERSION }),
-      };
+      return ok({ cleared: true, list: [] as Entry[] });
     }
 
     /* =========================
@@ -161,51 +168,32 @@ export const handler: Handler = async (event) => {
        ========================= */
     if (isLocalDev()) {
       if (event.httpMethod === "GET") {
-        return {
-          statusCode: 200,
-          headers: JSON_HEADERS,
-          body: JSON.stringify({ version: VERSION, list: MOCK_LIST }),
-        };
+        return ok({ list: MOCK_LIST });
       }
 
       if (event.httpMethod === "POST") {
-        if (!event.body) {
-          return {
-            statusCode: 400,
-            headers: JSON_HEADERS,
-            body: JSON.stringify({ ok: false, error: "Missing body", version: VERSION }),
-          };
+        if (!event.body) return bad(400, "Missing body");
+
+        let body: any;
+        try {
+          body = JSON.parse(event.body);
+        } catch {
+          return bad(400, "Invalid JSON body");
         }
 
-        const { points, name } = JSON.parse(event.body);
-        const p = Number(points);
+        const p = Number(body?.points);
+        if (!Number.isFinite(p) || p < 0 || p > 999) return bad(400, "Invalid points");
 
-        if (!Number.isFinite(p) || p < 0 || p > 999) {
-          return {
-            statusCode: 400,
-            headers: JSON_HEADERS,
-            body: JSON.stringify({ ok: false, error: "Invalid points", version: VERSION }),
-          };
-        }
-
-        const nm = cleanName(name) ?? randomName();
+        const nm = cleanName(body?.name) ?? randomName();
         MOCK_LIST.push({ name: nm, points: p, ts: Date.now() });
 
         MOCK_LIST.sort((a, b) => (b.points - a.points) || (a.ts - b.ts));
         MOCK_LIST = MOCK_LIST.slice(0, 10);
 
-        return {
-          statusCode: 200,
-          headers: JSON_HEADERS,
-          body: JSON.stringify({ ok: true, list: MOCK_LIST, changed: true, version: VERSION }),
-        };
+        return ok({ changed: true, list: MOCK_LIST });
       }
 
-      return {
-        statusCode: 405,
-        headers: JSON_HEADERS,
-        body: JSON.stringify({ ok: false, error: "Method Not Allowed", version: VERSION }),
-      };
+      return bad(405, "Method Not Allowed");
     }
 
     /* =========================
@@ -216,63 +204,42 @@ export const handler: Handler = async (event) => {
     // GET -> top10
     if (event.httpMethod === "GET") {
       const data = await readTop10(store, key);
-      return {
-        statusCode: 200,
-        headers: JSON_HEADERS,
-        body: JSON.stringify({ version: VERSION, ...data }),
-      };
+      // ✅ unified response shape: always { ok, version, list }
+      return ok({ list: data.list });
     }
 
     // POST -> score beküldés
     if (event.httpMethod === "POST") {
-      if (!event.body) {
-        return {
-          statusCode: 400,
-          headers: JSON_HEADERS,
-          body: JSON.stringify({ ok: false, error: "Missing body", version: VERSION }),
-        };
+      if (!event.body) return bad(400, "Missing body");
+
+      let body: any;
+      try {
+        body = JSON.parse(event.body);
+      } catch {
+        return bad(400, "Invalid JSON body");
       }
 
-      const { points, name } = JSON.parse(event.body);
-      const p = Number(points);
-
-      if (!Number.isFinite(p) || p < 0 || p > 999) {
-        return {
-          statusCode: 400,
-          headers: JSON_HEADERS,
-          body: JSON.stringify({ ok: false, error: "Invalid points", version: VERSION }),
-        };
-      }
+      const p = Number(body?.points);
+      if (!Number.isFinite(p) || p < 0 || p > 999) return bad(400, "Invalid points");
 
       const data = await readTop10(store, key);
       const list: Entry[] = Array.isArray(data.list) ? [...data.list] : [];
 
-      const nm = cleanName(name) ?? "Anonymous";
+      const nm = cleanName(body?.name) ?? "Anonymous";
       list.push({ name: nm, points: p, ts: Date.now() });
 
       list.sort((a, b) => (b.points - a.points) || (a.ts - b.ts));
       const trimmed = list.slice(0, 10);
 
-      // ✅ store as JSON STRING (TS-safe, Node-safe)
+      // ✅ store as JSON string (safe across Node/typing issues)
       await store.set(key, JSON.stringify({ list: trimmed }));
 
-      return {
-        statusCode: 200,
-        headers: JSON_HEADERS,
-        body: JSON.stringify({ ok: true, list: trimmed, changed: true, version: VERSION }),
-      };
+      // ✅ unified response shape
+      return ok({ changed: true, list: trimmed });
     }
 
-    return {
-      statusCode: 405,
-      headers: JSON_HEADERS,
-      body: JSON.stringify({ ok: false, error: "Method Not Allowed", version: VERSION }),
-    };
+    return bad(405, "Method Not Allowed");
   } catch (e: any) {
-    return {
-      statusCode: 500,
-      headers: JSON_HEADERS,
-      body: JSON.stringify({ ok: false, error: e?.message ?? String(e), version: VERSION }),
-    };
+    return bad(500, e?.message ?? String(e));
   }
 };

@@ -48,6 +48,44 @@ let lastStatus = "";
 let rafId: number | null = null;
 let lastT = 0;
 
+// ✅ prevents double-submit on game over
+let gameEnded = false;
+
+/* =========================
+   LEADERBOARD (Netlify Function)
+   ========================= */
+
+async function fetchJsonSafe(url: string, init?: RequestInit) {
+  const res = await fetch(url, { cache: "no-store", ...(init || {}) });
+
+  const ct = (res.headers.get("content-type") || "").toLowerCase();
+  const text = await res.text();
+
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status} ${res.statusText}: ${text.slice(0, 120)}`);
+  }
+  if (!ct.includes("application/json")) {
+    throw new Error(`Expected JSON, got "${ct}". First chars: ${text.slice(0, 80)}`);
+  }
+
+  return JSON.parse(text);
+}
+
+async function submitScore(points: number) {
+  // ✅ don't submit 0 or negative
+  if (!Number.isFinite(points) || points <= 0) return;
+
+  try {
+    await fetchJsonSafe("/.netlify/functions/chainTop", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ points }),
+    });
+  } catch (e) {
+    console.error("[chain] submitScore failed:", e);
+  }
+}
+
 /* =========================
    CHAIN RULE POOLS (GRID-LIKE)
    ========================= */
@@ -59,7 +97,6 @@ const ROW_KEYS: RuleKey[] = [
   "type",
   "banlist",
   "desc",
-  // ide jöhet még: "archetype", "set", "nameContains", stb. ha van
 ];
 
 const COL_KEYS: RuleKey[] = [
@@ -70,7 +107,6 @@ const COL_KEYS: RuleKey[] = [
   "def",
   "nameLength",
   "wordCount",
-  // ide jöhet még: "nameStarts", "nameEnds", stb. ha van
 ];
 
 let rowPool: Rule[] = [];
@@ -101,7 +137,6 @@ function pickRandom<T>(arr: T[]): T {
 function buildPools(c: ChainCtx): void {
   const all = c.rulePool;
 
-  // split + overlap kizárás (extra safety)
   rowPool = all
     .filter((r) => ROW_KEYS.includes(r.key))
     .filter((r) => !COL_KEYS.includes(r.key));
@@ -110,24 +145,17 @@ function buildPools(c: ChainCtx): void {
     .filter((r) => COL_KEYS.includes(r.key))
     .filter((r) => !ROW_KEYS.includes(r.key));
 
-  // nap típus: ha monster nap van, akkor a Spell/Trap-only rule-okat érdemes kivenni (pl. race)
   if (!c.dayIsSpellTrap) {
     rowPool = rowPool.filter((r) => r.key !== "race");
     colPool = colPool.filter((r) => r.key !== "race");
   }
 
-  // safety: ha valamelyik pool üres, fallback: legalább ne dőljön el
   if (!rowPool.length) rowPool = all.slice();
   if (!colPool.length) colPool = all.slice();
 }
 
 // gyors: csak addig számol, amíg eléri a minimumot
-function countSolutionsAtLeast(
-  cards: Card[],
-  a: Rule,
-  b: Rule,
-  min: number
-): boolean {
+function countSolutionsAtLeast(cards: Card[], a: Rule, b: Rule, min: number): boolean {
   let n = 0;
   for (const card of cards) {
     if (matches(card, a) && matches(card, b)) {
@@ -139,12 +167,10 @@ function countSolutionsAtLeast(
 }
 
 function pickRulePair(c: ChainCtx): { row: Rule; col: Rule } {
-  // row -> kompatibilis col -> min solutions
   for (let t = 0; t < MAX_PICK_TRIES; t++) {
     const row = pickRandom(rowPool);
 
     const candidates = colPool.filter((col) => {
-      // ne legyen ugyanaz a key (pl. level+level), és legyen kompatibilis
       if (col.key === row.key) return false;
       return rulesCompatible(row, col);
     });
@@ -153,13 +179,11 @@ function pickRulePair(c: ChainCtx): { row: Rule; col: Rule } {
 
     const col = pickRandom(candidates);
 
-    // min solutions
     if (!countSolutionsAtLeast(c.cards, row, col, MIN_SOLUTIONS)) continue;
 
     return { row, col };
   }
 
-  // fallback (BIZTOSAN nem pickelünk üresből)
   const row = pickRandom(rowPool);
 
   const colCandidates = colPool.filter((x) => x.key !== row.key);
@@ -167,7 +191,6 @@ function pickRulePair(c: ChainCtx): { row: Rule; col: Rule } {
 
   let col = pickRandom(safeColPool);
 
-  // végső hard guard: ha valamiért mégis egyezne a key, keressünk mást
   if (col.key === row.key) {
     const alt = colPool.find((x) => x.key !== row.key) ?? col;
     col = alt;
@@ -214,6 +237,31 @@ function localLoop(t: number): void {
 }
 
 /* =========================
+   GAME OVER
+   ========================= */
+
+async function endGame(reason: "time" | "close" = "time"): Promise<void> {
+  if (gameEnded) return;
+  gameEnded = true;
+
+  running = false;
+  stopLocalLoop();
+
+  lastStatus =
+    reason === "time"
+      ? `⏱ Time's up – Game Over • Score: ${score}`
+      : `⛔ Closed • Score: ${score}`;
+
+  emitUI();
+
+  // ✅ submit to global leaderboard (non-blocking for UI)
+  await submitScore(score);
+
+  // If you later add Top10 into chainUI, you can refresh it here.
+  // e.g. await refreshTop10InUI?.();
+}
+
+/* =========================
    PUBLIC API
    ========================= */
 
@@ -226,31 +274,30 @@ export function startChainMode(input: ChainCtx): void {
   const c = requireCtx();
 
   running = true;
+  gameEnded = false;
   score = 0;
   timeLeftMs = ROUND_MS;
   lastStatus = "Pick a card that matches BOTH rules";
 
   activeCards = computeActiveCards(c);
 
-  // grid-like: build row/col pools + pick first pair
   buildPools(c);
   const pair = pickRulePair(c);
   currentRowRule = pair.row;
   currentColRule = pair.col;
 
-  // UI megnyitása + események bekötése
   renderChainUI({
     onPick: (card) => {
       pickCardById(card.id);
     },
     onClose: () => {
-      stopChainMode();
+      // ✅ close counts as end (optional)
+      endGame("close").finally(() => stopChainMode());
     },
   });
 
   emitUI();
 
-  // ha chain.html módban vagyunk, indítsuk a belső tick-et is
   if (isChainPage()) {
     stopLocalLoop();
     rafId = requestAnimationFrame(localLoop);
@@ -266,9 +313,8 @@ export function tickChain(dtMs: number): void {
   timeLeftMs = Math.max(0, timeLeftMs - dtMs);
 
   if (timeLeftMs <= 0) {
-    running = false;
-    lastStatus = "⏱ Time's up – Game Over";
-    emitUI();
+    // ✅ submit once + freeze
+    void endGame("time");
     return;
   }
 
@@ -287,7 +333,6 @@ export function pickCardById(cardId: number | string): boolean {
   const card = c.cards.find((x) => String(x.id) === String(cardId)) ?? null;
   if (!card) return false;
 
-  // hard guard: nap típusa
   if (c.dayIsSpellTrap) {
     if (card.kind === "monster") return false;
   } else {
@@ -303,7 +348,7 @@ export function pickCardById(cardId: number | string): boolean {
   } else {
     score = Math.max(0, score - 20);
     lastStatus = "❌ Wrong! -20";
-    nextChainStep(); // nálad: rossznál is reset
+    nextChainStep();
   }
 
   emitUI();
@@ -339,22 +384,18 @@ export function stopChainMode(): void {
    ========================= */
 
 function isChainPage(): boolean {
-  // működik /chain.html és /chain útvonalon is
   const p = window.location.pathname.toLowerCase();
   return p.endsWith("/chain") || p.endsWith("/chain.html");
 }
 
 function getGlobalCards(): Card[] | null {
   const w = window as any;
-
-  // több lehetséges hely, safe fallback
   const candidates = [
     w.__YUGIGRID_CARDS__,
     w.cards,
     w.CARDS,
     (globalThis as any).__YUGIGRID_CARDS__,
   ];
-
   for (const v of candidates) {
     if (Array.isArray(v) && v.length) return v as Card[];
   }
@@ -376,23 +417,27 @@ function getGlobalRules(): Rule[] | null {
 }
 
 function bootChainPage(): void {
-  // csak a chain oldalon bootoljunk
   if (!isChainPage()) return;
 
-  // ha már fut (pl. app.ts-ből), ne bootoljunk rá
+  // ✅ IMPORTANT: if you use dedicated chainPage.ts (with #chainRoot),
+  // do NOT boot overlay chainUI on top of it.
+  if (document.getElementById("chainRoot")) return;
+
   if (running) return;
 
   const cards = getGlobalCards();
   const rules = getGlobalRules();
 
-  // UI-t akkor is nyissuk meg, hogy legyen “életjel”
   renderChainUI({
     onPick: (card) => pickCardById(card.id),
-    onClose: () => stopChainMode(),
+    onClose: () => {
+      void endGame("close").finally(() => stopChainMode());
+    },
   });
 
   if (!cards || !rules) {
     running = false;
+    gameEnded = false;
     score = 0;
     timeLeftMs = 0;
     currentRowRule = null;
@@ -404,7 +449,6 @@ function bootChainPage(): void {
     return;
   }
 
-  // alap beállítás: monster nap (később lehet daily seedből)
   startChainMode({
     cards,
     rulePool: rules,
@@ -412,7 +456,6 @@ function bootChainPage(): void {
   });
 }
 
-// automatikus boot
 try {
   bootChainPage();
 } catch (e) {
