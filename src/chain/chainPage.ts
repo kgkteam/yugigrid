@@ -3,7 +3,7 @@ import type { Card, Rule } from "../engine/engine";
 import { mulberry32, dateSeed, matches, rulesCompatible } from "../engine/engine";
 import { loadAllCards } from "../data/loadAllCards";
 
-console.log("CHAINPAGE VERSION: START+END+TOP10+NAMEPICK+HIGHLIGHT-v2.3-HOW-ON-RESTART");
+console.log("CHAINPAGE VERSION: START+END+TOP10+NAMEPICK+HIGHLIGHT-v2.4-HOW-ON-RESTART+NO-DESC-RULES");
 
 /* =========================
    ROOT
@@ -370,6 +370,9 @@ function setHowVisible(visible: boolean) {
   const howEl = document.getElementById("chainHow") as HTMLDivElement | null;
   if (howEl) howEl.style.display = visible ? "block" : "none";
 }
+
+// ✅ if the loaded cards do NOT contain descriptions, disable "mentions/desc" rules
+let HAS_DESC_DATA = true;
 
 /* =========================
    DOM (safe)
@@ -937,6 +940,18 @@ function pickNextTwoRules(all: Rule[]) {
       .filter((r) => r?.key && normKey(r.key) !== "all" && normKey(r.key) !== "any")
       .filter((r) => !RULE_BLACKLIST_KEYS.has(normKey(r.key)))
       .filter((r) => {
+        // ✅ if our card dataset has NO desc/effect text, remove any rule that relies on it
+        if (!HAS_DESC_DATA) {
+          const k = normKey((r as any).key);
+          const lab = String((r as any).label ?? "").trim().toLowerCase();
+
+          // keys that typically mean "effect text"
+          if (k === "desc" || k === "desclength" || k === "text" || k === "effect" || k === "description") return false;
+
+          // labels like: "mentions draw", "mentions gy", etc.
+          if (lab.startsWith("mentions ") || lab.includes("mentions ")) return false;
+        }
+
         const k = normKey((r as any).key);
         const op = normOp((r as any).op);
         const v = Number((r as any).value);
@@ -1193,12 +1208,6 @@ function pickById(id: string) {
 
   const ok = matches(card, ruleA) && matches(card, ruleB);
 
-  console.log("DBG card keys:", Object.keys(card));
-  console.log("DBG card.desc:", (card as any).desc);
-  console.log("DBG ruleA", ruleA, "matchA", matches(card, ruleA));
-  console.log("DBG ruleB", ruleB, "matchB", matches(card, ruleB));
-
-
   if (!ok) {
     wrongThisRound++;
     halveAwardOnWrong();
@@ -1364,13 +1373,27 @@ document.getElementById("chainRestart")?.addEventListener("click", () => {
 });
 
 endRestartEl?.addEventListener("click", () => {
-  // Play again just uses the same restart flow (✅ will show How it works)
+  // Play again uses the same restart flow (✅ will show How it works)
   (document.getElementById("chainRestart") as HTMLButtonElement | null)?.click();
 });
 
 /* =========================
    INIT
    ========================= */
+
+function computeHasDescData(cards: Card[]): boolean {
+  for (let i = 0; i < cards.length; i++) {
+    const c: any = cards[i] as any;
+    const t =
+      (typeof c?.desc === "string" && c.desc) ||
+      (typeof c?.description === "string" && c.description) ||
+      (typeof c?.text === "string" && c.text) ||
+      (typeof c?.effect === "string" && c.effect) ||
+      "";
+    if (String(t).trim().length > 0) return true;
+  }
+  return false;
+}
 
 async function init() {
   try {
@@ -1386,6 +1409,12 @@ async function init() {
 
     CARDS = await loadAllCards();
     RULES = await loadRules();
+
+    // ✅ detect whether our card data actually contains descriptions/effect text
+    HAS_DESC_DATA = computeHasDescData(CARDS);
+    if (!HAS_DESC_DATA) {
+      console.warn("[chain] Card dataset has no desc/text. Disabling 'mentions/desc' rules in Chain Mode.");
+    }
 
     CARD_BY_ID = new Map(CARDS.map((c) => [String(c.id), c]));
     CARD_NAME_LOWER = CARDS.map((c) => (c?.name ?? "").toLowerCase());
