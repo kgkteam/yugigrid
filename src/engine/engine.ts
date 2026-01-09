@@ -524,6 +524,12 @@ function rulesCompatibleSimple(a: Rule, b: Rule): boolean {
   const A_isST = isSpellTrapRule(a);
   const B_isST = isSpellTrapRule(b);
 
+  if (a.key === "effect" && b.key === "desc")
+    return false;
+
+  if (b.key === "effect" && a.key === "desc")
+    return false;
+
   if (a.key === "level" && (b.key === "rank" || b.key === "linkRating" || B_isST)) return false;
   if (b.key === "level" && (a.key === "rank" || a.key === "linkRating" || A_isST)) return false;
 
