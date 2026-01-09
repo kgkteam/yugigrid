@@ -229,13 +229,15 @@ export const handler: Handler = async (event) => {
 
       const trimmed = list.slice(0, 10);
 
-      await store.set(key, { list: trimmed });
+      await store.set(key
 
-      return {
-        statusCode: 200,
-        headers: JSON_HEADERS,
-        body: JSON.stringify({ ok: true, list: trimmed, changed: true, version: VERSION }),
-      };
+      const payload = new Blob(
+        [JSON.stringify({ list: trimmed })],
+        { type: "application/json" }
+      );
+
+      await store.set(key, payload);
+
     }
 
     return {
