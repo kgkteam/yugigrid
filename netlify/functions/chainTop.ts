@@ -5,14 +5,13 @@ import { getStore } from "@netlify/blobs";
 const JSON_HEADERS: Record<string, string> = {
   "content-type": "application/json; charset=utf-8",
   "cache-control": "no-store",
-  // ✅ safe even if same-origin; also prevents random CORS/preflight pain
   "access-control-allow-origin": "*",
   "access-control-allow-headers": "content-type",
   "access-control-allow-methods": "GET,POST,OPTIONS",
 };
 
 // ✅ bump this anytime you redeploy to verify the live function updated
-const VERSION = "chainTop-2026-01-09-v5";
+const VERSION = "chainTop-2026-01-09-v6";
 
 type Entry = {
   name: string;
@@ -33,7 +32,6 @@ function randomName(): string {
   return `${a} ${n}`;
 }
 
-// ✅ ONLY local when running `netlify dev`
 function isLocalDev(): boolean {
   return process.env.NETLIFY_DEV === "true" || process.env.NETLIFY_LOCAL === "true";
 }
@@ -45,7 +43,6 @@ let MOCK_LIST: Entry[] = [
   { name: "Crimson Hawk", points: 54, ts: Date.now() - 180000 },
 ];
 
-// ✅ sanitize + limit name length
 function cleanName(x: unknown): string | null {
   const s = String(x ?? "").trim().replace(/\s+/g, " ");
   if (!s) return null;
@@ -55,23 +52,45 @@ function cleanName(x: unknown): string | null {
 }
 
 /**
+ * ✅ Creates a blobs store in a way that works even if
+ * Netlify doesn't auto-inject the blobs environment.
+ *
+ * Required env vars on Netlify (Site settings → Environment variables):
+ * - NETLIFY_SITE_ID
+ * - NETLIFY_AUTH_TOKEN  (a Personal Access Token)
+ */
+function getBlobsStore() {
+  const siteID = process.env.NETLIFY_SITE_ID || process.env.SITE_ID || "";
+  const token =
+    process.env.NETLIFY_AUTH_TOKEN ||
+    process.env.NETLIFY_TOKEN ||
+    process.env.BLOBS_TOKEN ||
+    "";
+
+  // If provided, use manual config (fixes your error)
+  if (siteID && token) {
+    return getStore({ name: "chain_leaderboard", siteID, token });
+  }
+
+  // Fallback: try default (works on some setups)
+  return getStore("chain_leaderboard");
+}
+
+/**
  * ✅ Robust read that never throws:
  * - tries JSON typed read
- * - if it fails (bad data), falls back to text read
+ * - if it fails, falls back to text read
  */
 async function readTop10(store: ReturnType<typeof getStore>, key: string): Promise<Top10> {
-  // 1) Try JSON mode
   try {
     const raw = (await store.get(key, { type: "json" })) as unknown;
 
     if (!raw) return { list: [] };
 
-    // stored as object { list: [...] }
     if (typeof raw === "object" && raw !== null && Array.isArray((raw as any).list)) {
       return { list: (raw as any).list as Entry[] };
     }
 
-    // stored as JSON string (rare)
     if (typeof raw === "string") {
       const parsed = JSON.parse(raw);
       if (parsed && Array.isArray(parsed.list)) return { list: parsed.list as Entry[] };
@@ -79,7 +98,6 @@ async function readTop10(store: ReturnType<typeof getStore>, key: string): Promi
 
     return { list: [] };
   } catch {
-    // 2) Fallback: read as text and parse ourselves
     try {
       const txt = (await store.get(key, { type: "text" })) as unknown;
       if (typeof txt !== "string" || !txt) return { list: [] };
@@ -100,30 +118,20 @@ function ok(body: any) {
   };
 }
 
-function bad(statusCode: number, error: string) {
+function bad(statusCode: number, error: string, extra?: any) {
   return {
     statusCode,
     headers: JSON_HEADERS,
-    body: JSON.stringify({ ok: false, version: VERSION, error }),
+    body: JSON.stringify({ ok: false, version: VERSION, error, ...(extra || {}) }),
   };
 }
 
 export const handler: Handler = async (event) => {
   try {
-    // ✅ handle preflight (some browsers/tools do this)
     if (event.httpMethod === "OPTIONS") return ok({});
 
-    // ✅ QUICK WIPE OPTION:
-    // Change this key to instantly "reset" the leaderboard without fighting old stored data.
-    // Example: "top10_global_v2"
     const key = "top10_global";
 
-    /* =========================
-       ADMIN: CLEAR LEADERBOARD
-       =========================
-       - GET:  /.netlify/functions/chainTop?adminClear=1&token=...
-       - POST: /.netlify/functions/chainTop  body { "adminClear": true, "token":"..." }
-    */
     const ADMIN_TOKEN = process.env.CHAIN_ADMIN_TOKEN || "";
     const qs = event.queryStringParameters || {};
 
@@ -142,34 +150,14 @@ export const handler: Handler = async (event) => {
         }
       })();
 
-    if (clearByGet || clearByPost) {
-      const token = clearByGet
-        ? String(qs.token || "")
-        : (() => {
-            try {
-              const body = JSON.parse(event.body || "{}");
-              return String(body?.token || "");
-            } catch {
-              return "";
-            }
-          })();
-
-      if (!ADMIN_TOKEN) return bad(500, "Admin token not configured");
-      if (!token || token !== ADMIN_TOKEN) return bad(403, "Forbidden");
-
-      const store = getStore("chain_leaderboard");
-      await store.delete(key);
-
-      return ok({ cleared: true, list: [] as Entry[] });
-    }
-
-    /* =========================
-       LOCAL DEV (MOCK)
-       ========================= */
+    // LOCAL DEV (MOCK)
     if (isLocalDev()) {
-      if (event.httpMethod === "GET") {
-        return ok({ list: MOCK_LIST });
+      if (clearByGet || clearByPost) {
+        MOCK_LIST = [];
+        return ok({ cleared: true, list: [] as Entry[] });
       }
+
+      if (event.httpMethod === "GET") return ok({ list: MOCK_LIST });
 
       if (event.httpMethod === "POST") {
         if (!event.body) return bad(400, "Missing body");
@@ -196,19 +184,59 @@ export const handler: Handler = async (event) => {
       return bad(405, "Method Not Allowed");
     }
 
-    /* =========================
-       PROD (NETLIFY BLOBS)
-       ========================= */
-    const store = getStore("chain_leaderboard");
+    // PROD (NETLIFY BLOBS)
+    const store = getBlobsStore();
 
-    // GET -> top10
-    if (event.httpMethod === "GET") {
-      const data = await readTop10(store, key);
-      // ✅ unified response shape: always { ok, version, list }
-      return ok({ list: data.list });
+    // Optional: if env is missing, return a clearer hint.
+    // (This doesn't block the fallback, but gives you a readable error if fallback fails.)
+    const hasManualEnv =
+      !!(process.env.NETLIFY_SITE_ID || process.env.SITE_ID) &&
+      !!(process.env.NETLIFY_AUTH_TOKEN || process.env.NETLIFY_TOKEN || process.env.BLOBS_TOKEN);
+
+    if (clearByGet || clearByPost) {
+      const token = clearByGet
+        ? String(qs.token || "")
+        : (() => {
+            try {
+              const body = JSON.parse(event.body || "{}");
+              return String(body?.token || "");
+            } catch {
+              return "";
+            }
+          })();
+
+      if (!ADMIN_TOKEN) return bad(500, "Admin token not configured");
+      if (!token || token !== ADMIN_TOKEN) return bad(403, "Forbidden");
+
+      try {
+        await store.delete(key);
+        return ok({ cleared: true, list: [] as Entry[] });
+      } catch (e: any) {
+        return bad(
+          500,
+          e?.message ?? String(e),
+          hasManualEnv
+            ? undefined
+            : { hint: "Set NETLIFY_SITE_ID and NETLIFY_AUTH_TOKEN in Netlify environment variables." }
+        );
+      }
     }
 
-    // POST -> score beküldés
+    if (event.httpMethod === "GET") {
+      try {
+        const data = await readTop10(store, key);
+        return ok({ list: data.list });
+      } catch (e: any) {
+        return bad(
+          500,
+          e?.message ?? String(e),
+          hasManualEnv
+            ? undefined
+            : { hint: "Set NETLIFY_SITE_ID and NETLIFY_AUTH_TOKEN in Netlify environment variables." }
+        );
+      }
+    }
+
     if (event.httpMethod === "POST") {
       if (!event.body) return bad(400, "Missing body");
 
@@ -222,20 +250,28 @@ export const handler: Handler = async (event) => {
       const p = Number(body?.points);
       if (!Number.isFinite(p) || p < 0 || p > 999) return bad(400, "Invalid points");
 
-      const data = await readTop10(store, key);
-      const list: Entry[] = Array.isArray(data.list) ? [...data.list] : [];
+      try {
+        const data = await readTop10(store, key);
+        const list: Entry[] = Array.isArray(data.list) ? [...data.list] : [];
 
-      const nm = cleanName(body?.name) ?? "Anonymous";
-      list.push({ name: nm, points: p, ts: Date.now() });
+        const nm = cleanName(body?.name) ?? "Anonymous";
+        list.push({ name: nm, points: p, ts: Date.now() });
 
-      list.sort((a, b) => (b.points - a.points) || (a.ts - b.ts));
-      const trimmed = list.slice(0, 10);
+        list.sort((a, b) => (b.points - a.points) || (a.ts - b.ts));
+        const trimmed = list.slice(0, 10);
 
-      // ✅ store as JSON string (safe across Node/typing issues)
-      await store.set(key, JSON.stringify({ list: trimmed }));
+        await store.set(key, JSON.stringify({ list: trimmed }));
 
-      // ✅ unified response shape
-      return ok({ changed: true, list: trimmed });
+        return ok({ changed: true, list: trimmed });
+      } catch (e: any) {
+        return bad(
+          500,
+          e?.message ?? String(e),
+          hasManualEnv
+            ? undefined
+            : { hint: "Set NETLIFY_SITE_ID and NETLIFY_AUTH_TOKEN in Netlify environment variables." }
+        );
+      }
     }
 
     return bad(405, "Method Not Allowed");
