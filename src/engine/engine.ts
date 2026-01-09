@@ -326,7 +326,6 @@ export function matches(card: Card, rule: Rule): boolean {
   const vn = toNum(v);
   const n1 = toNum(value);
   const n2 = toNum(value2);
-  const n3 = toNum(value3);
 
   if (op === "eq") {
     if (Number.isFinite(vn) && Number.isFinite(n1)) return vn === n1;
@@ -344,7 +343,15 @@ export function matches(card: Card, rule: Rule): boolean {
   if (op === "higherEq") return Number.isFinite(vn) && Number.isFinite(n1) && vn >= n1;
 
   if (op === "between") {
-    return Number.isFinite(vn) && Number.isFinite(n1) && Number.isFinite(n2) && vn >= n1 && vn <= n2;
+      let ret = Number.isFinite(vn) && Number.isFinite(n1) && Number.isFinite(n2) && vn >= n1 && vn <= n2;
+      if (!ret && card.id === 33420078) {
+      console.log ("false because");
+      console.log ("vn: "  + vn);
+      console.log ("n1: "  + n1);
+      console.log ("n2: "  + n2);
+      }
+      
+
   }
 
   if (op === "wordCount") return typeof v === "string" && v.trim().split(/\s+/).length === value;
@@ -361,7 +368,7 @@ export function matches(card: Card, rule: Rule): boolean {
       .map(v => String(v).toLowerCase());
 
     let ret =  values.some(val => t.includes(val));
-    if (!ret){
+    if (!ret && card.id === 33420078){
       console.log ("false because");
       console.log ("t: " + t);
       console.log ("value: "  + value);
@@ -551,12 +558,6 @@ function rulesCompatibleSimple(a: Rule, b: Rule): boolean {
     const ia = levelInterval(a);
     const ib = levelInterval(b);
     if (ia && ib && !intervalsOverlap(ia, ib)) {
-      console.log ("false because");
-      console.log ("a.value: " + a.value);
-      console.log ("a.value2: " + a.value2);
-      console.log ("ia: "  + ia);
-      console.log ("ib: "  + ib);
-      
       return false;
     }
 
