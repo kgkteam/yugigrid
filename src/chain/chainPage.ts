@@ -4,7 +4,7 @@ import { mulberry32, dateSeed, matches, rulesCompatible } from "../engine/engine
 import { loadAllCards } from "../data/loadAllCards";
 import { DEBUG_RULES_ENABLED, DEBUG_CHAIN_RULES } from "../debugRules";
 
-console.log("CHAINPAGE VERSION: START+END+TOP10+NAMEPICK+HIGHLIGHT-v2.4-HOW-ON-RESTART+NO-DESC-RULES");
+console.log("CHAINPAGE VERSION: START+END+TOP10+NAMEPICK+HIGHLIGHT-v2.4.1-SWAP-HOW-FIRSTLOAD-RESTART");
 
 /* =========================
    ROOT
@@ -120,7 +120,7 @@ root.innerHTML = `
           You have <b>30 seconds</b> each round.
         </div>
 
-        <!-- How it works ONLY here (✅ default hidden to prevent flash) -->
+        <!-- How it works ONLY here (default hidden) -->
         <div class="chainHow chainHowInOverlay" id="chainHow" style="display:none;">
           <div class="chainHowTitle">How it works</div>
           <div class="chainHowBody">
@@ -364,7 +364,9 @@ let gameStarted = false;
 let highlightName: string | null = null;
 let highlightUntil = 0;
 
-// ✅ show How it works only when Restart / Play again is pressed
+// ✅ swap behavior:
+// - first load: overlay shows intro (no how)
+// - restart/play again: overlay shows how
 let showHowOnNextStartOverlay = false;
 
 function setHowVisible(visible: boolean) {
@@ -624,10 +626,15 @@ function qualifiesForTop10(points: number, list: Array<{ points: number }>): boo
 function showStartOverlay() {
   if (startOverlayEl) startOverlayEl.style.display = "flex";
 
-  // ✅ only show when requested (Restart / Play again)
+  // ✅ SWAPPED:
+  // - first load: showHowOnNextStartOverlay is false
+  // - restart/play again sets it true
   setHowVisible(showHowOnNextStartOverlay);
-  showHowOnNextStartOverlay = false; // consume
+
+  // consume flag so next open goes back to intro unless restart sets it again
+  showHowOnNextStartOverlay = false;
 }
+
 function hideStartOverlay() {
   if (startOverlayEl) startOverlayEl.style.display = "none";
 }
@@ -637,6 +644,7 @@ function showEndOverlay(title: string, sub: string) {
   if (endSubEl) endSubEl.textContent = sub;
   if (endOverlayEl) endOverlayEl.style.display = "flex";
 }
+
 function hideEndOverlay() {
   if (endOverlayEl) endOverlayEl.style.display = "none";
 }
@@ -933,7 +941,8 @@ function rememberLast(a: Rule, b: Rule) {
 }
 
 function pickNextTwoRules(all: Rule[]) {
-    if (DEBUG_RULES_ENABLED) {
+  // ✅ debug fixed
+  if (DEBUG_RULES_ENABLED) {
     console.warn("[DEBUG] Using fixed chain rules");
     return DEBUG_CHAIN_RULES;
   }
@@ -951,10 +960,7 @@ function pickNextTwoRules(all: Rule[]) {
           const k = normKey((r as any).key);
           const lab = String((r as any).label ?? "").trim().toLowerCase();
 
-          // keys that typically mean "effect text"
           if (k === "desc" || k === "desclength" || k === "text" || k === "effect" || k === "description") return false;
-
-          // labels like: "mentions draw", "mentions gy", etc.
           if (lab.startsWith("mentions ") || lab.includes("mentions ")) return false;
         }
 
@@ -1347,7 +1353,7 @@ document.getElementById("chainRestart")?.addEventListener("click", () => {
 
   hideEndOverlay();
 
-  // ✅ only on Restart / Play again
+  // ✅ restart/play again -> next start overlay shows HOW
   showHowOnNextStartOverlay = true;
   showStartOverlay();
 
@@ -1379,7 +1385,7 @@ document.getElementById("chainRestart")?.addEventListener("click", () => {
 });
 
 endRestartEl?.addEventListener("click", () => {
-  // Play again uses the same restart flow (✅ will show How it works)
+  // Play again uses same restart flow (shows HOW)
   (document.getElementById("chainRestart") as HTMLButtonElement | null)?.click();
 });
 
@@ -1416,7 +1422,6 @@ async function init() {
     CARDS = await loadAllCards();
     RULES = await loadRules();
 
-    // ✅ detect whether our card data actually contains descriptions/effect text
     HAS_DESC_DATA = computeHasDescData(CARDS);
     if (!HAS_DESC_DATA) {
       console.warn("[chain] Card dataset has no desc/text. Disabling 'mentions/desc' rules in Chain Mode.");
@@ -1444,7 +1449,7 @@ async function init() {
     lastSigB = null;
     recentSigs.length = 0;
 
-    // ✅ first load: show overlay WITHOUT How it works
+    // ✅ FIRST LOAD: show overlay WITHOUT how
     showHowOnNextStartOverlay = false;
     showStartOverlay();
   } catch (e) {
