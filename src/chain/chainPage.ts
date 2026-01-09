@@ -121,7 +121,7 @@ root.innerHTML = `
         </div>
 
         <!-- How it works ONLY here (✅ default hidden to prevent flash) -->
-        <div class="chainHow chainHowInOverlay" id="chainHow" style="display:none;">
+        <div class="chainHow chainHowInOverlay" id="chainHow" style="display:block;">
           <div class="chainHowTitle">How it works</div>
           <div class="chainHowBody">
             • Press <b>Start</b> to begin.<br/>
@@ -624,13 +624,15 @@ function qualifiesForTop10(points: number, list: Array<{ points: number }>): boo
 function showStartOverlay() {
   if (startOverlayEl) startOverlayEl.style.display = "flex";
 
-  // ✅ first page load: show "How it works"
-  // ✅ restart/play again: do NOT show it
+  // first load: true, restart: false
   setHowVisible(!howShownOnce);
   howShownOnce = true;
 }
 
 function hideStartOverlay() {
+  // amikor eltűnik az overlay (Start-ra), rejtsük el a How részt is,
+  // hogy később (restartnál) se legyen villanás
+  setHowVisible(false);
   if (startOverlayEl) startOverlayEl.style.display = "none";
 }
 
