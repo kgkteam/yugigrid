@@ -1193,6 +1193,12 @@ function pickById(id: string) {
 
   const ok = matches(card, ruleA) && matches(card, ruleB);
 
+  console.log("DBG card keys:", Object.keys(card));
+  console.log("DBG card.desc:", (card as any).desc);
+  console.log("DBG ruleA", ruleA, "matchA", matches(card, ruleA));
+  console.log("DBG ruleB", ruleB, "matchB", matches(card, ruleB));
+
+
   if (!ok) {
     wrongThisRound++;
     halveAwardOnWrong();
