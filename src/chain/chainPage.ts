@@ -1,9 +1,9 @@
-// chainPage.ts — Chain Mode page logic (START button + help text + end screen + Top10 name pick + NEW highlight)
+// chainPage.ts — Chain Mode page logic (START button + help text in popup + end screen + Top10 name pick + NEW highlight)
 import type { Card, Rule } from "../engine/engine";
 import { mulberry32, dateSeed, matches, rulesCompatible } from "../engine/engine";
 import { loadAllCards } from "../data/loadAllCards";
 
-console.log("CHAINPAGE VERSION: START+HELP+ENDSCREEN+TOP10-NAMEPICK+HIGHLIGHT-v1");
+console.log("CHAINPAGE VERSION: START+HELP-IN-POPUP+ENDSCREEN+TOP10-NAMEPICK+HIGHLIGHT-v2");
 
 /* =========================
    ROOT
@@ -59,18 +59,6 @@ root.innerHTML = `
 
           <div class="chainRules" id="chainRules" style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap;"></div>
           <div class="chainRule" id="chainRuleText" style="display:none;">—</div>
-
-          <!-- Small help text (visible on load) -->
-          <div class="chainHow" id="chainHow">
-            <div class="chainHowTitle">How it works</div>
-            <div class="chainHowBody">
-              • Press <b>Start</b> to begin.<br/>
-              • You get <b>2 rules</b> — type a card name that matches <b>both</b>.<br/>
-              • Wrong answers <b>halve</b> the points for the round.<br/>
-              • You cannot reuse the last <b>5</b> correct cards.<br/>
-              • Each round has <b>30 seconds</b>. Time’s up = game over.
-            </div>
-          </div>
 
           <div class="chainToast" id="chainToast"></div>
 
@@ -130,6 +118,19 @@ root.innerHTML = `
           Pick a card that matches <b>both</b> rules.<br/>
           You have <b>30 seconds</b> each round.
         </div>
+
+        <!-- How it works ONLY here -->
+        <div class="chainHow chainHowInOverlay" id="chainHow">
+          <div class="chainHowTitle">How it works</div>
+          <div class="chainHowBody">
+            • Press <b>Start</b> to begin.<br/>
+            • You get <b>2 rules</b> — type a card name that matches <b>both</b>.<br/>
+            • Wrong answers <b>halve</b> the points for the round.<br/>
+            • You cannot reuse the last <b>5</b> correct cards.<br/>
+            • Each round has <b>30 seconds</b>. Time’s up = game over.
+          </div>
+        </div>
+
         <button class="btn primary" id="chainStartBtn" type="button">Start</button>
       </div>
     </div>
@@ -227,9 +228,8 @@ style.textContent = `
   .chainTopPanelFoot{ margin-top:10px; }
   .chainTopPanelHint{ font-size:11px; opacity:.65; font-weight:900; }
 
-  /* Help text */
+  /* Help text (reused inside overlay) */
   .chainHow{
-    margin-top: 10px;
     border: 1px solid rgba(255,255,255,.10);
     background: rgba(255,255,255,.04);
     border-radius: 14px;
@@ -237,6 +237,12 @@ style.textContent = `
   }
   .chainHowTitle{ font-weight: 950; font-size: 12px; opacity: .9; margin-bottom: 6px; }
   .chainHowBody{ font-weight: 900; font-size: 11px; line-height: 1.35; opacity: .75; }
+
+  /* special: in overlay we want left-aligned + spacing */
+  .chainHowInOverlay{
+    margin: 12px 0 14px;
+    text-align: left;
+  }
 
   /* Start overlay */
   .chainStartOverlay{
@@ -256,7 +262,7 @@ style.textContent = `
     text-align:center;
   }
   .chainStartTitle{ font-weight:950; font-size:18px; margin-bottom:6px; }
-  .chainStartSub{ opacity:.8; font-weight:900; font-size:12px; margin-bottom:12px; line-height:1.35; }
+  .chainStartSub{ opacity:.8; font-weight:900; font-size:12px; margin-bottom:10px; line-height:1.35; }
 
   /* End overlay */
   .chainEndOverlay{
@@ -359,7 +365,6 @@ let highlightUntil = 0;
 
 const inputEl = document.getElementById("chainInput") as HTMLInputElement;
 const dropEl = document.getElementById("chainDrop") as HTMLDivElement;
-const ruleEl = document.getElementById("chainRuleText") as HTMLDivElement;
 const msgEl = document.getElementById("chainMsg") as HTMLDivElement;
 const nameEl = document.getElementById("chainCardName") as HTMLDivElement;
 const imgEl = document.getElementById("chainCardImg") as HTMLImageElement;
@@ -766,7 +771,7 @@ function randInt(max: number): number {
 }
 
 /* =========================
-   PICK RULES (your existing logic)
+   PICK RULES
    ========================= */
 
 function ruleSig(r: Rule): string {
@@ -1234,7 +1239,6 @@ startBtnEl?.addEventListener("click", () => {
   gameStarted = true;
   gameEnded = false;
 
-  // first round
   const next = pickNextTwoRules(RULES);
   ruleA = next.a;
   ruleB = next.b;
@@ -1251,7 +1255,6 @@ startBtnEl?.addEventListener("click", () => {
 });
 
 (document.getElementById("chainRestart") as HTMLButtonElement).addEventListener("click", () => {
-  // reset everything but do NOT auto-start
   gameEnded = false;
   gameStarted = false;
 
@@ -1285,7 +1288,6 @@ startBtnEl?.addEventListener("click", () => {
 });
 
 endRestartEl?.addEventListener("click", () => {
-  // same behavior as Restart (wait for Start)
   (document.getElementById("chainRestart") as HTMLButtonElement)?.click();
 });
 
@@ -1303,7 +1305,6 @@ async function init() {
     inputEl.disabled = true;
     updateTimerUI(30, 30);
 
-    // load Top10 ASAP
     void loadTop10();
 
     CARDS = await loadAllCards();
@@ -1312,7 +1313,6 @@ async function init() {
     CARD_BY_ID = new Map(CARDS.map((c) => [String(c.id), c]));
     CARD_NAME_LOWER = CARDS.map((c) => (c?.name ?? "").toLowerCase());
 
-    // initial state: not started
     gameEnded = false;
     gameStarted = false;
 
@@ -1325,7 +1325,6 @@ async function init() {
     hideDrop();
     updateTimerUI(30, 30);
 
-    // no rule yet, no timer
     renderRules([]);
     inputEl.disabled = true;
 
