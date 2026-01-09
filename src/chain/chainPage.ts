@@ -4,7 +4,7 @@ import { mulberry32, dateSeed, matches, rulesCompatible } from "../engine/engine
 import { loadAllCards } from "../data/loadAllCards";
 import { DEBUG_RULES_ENABLED, DEBUG_CHAIN_RULES } from "../debugRules";
 
-console.log("CHAINPAGE VERSION: START+END+TOP10+NAMEPICK+HIGHLIGHT-v2.4.1-SWAP-HOW-FIRSTLOAD-RESTART");
+console.log("CHAINPAGE VERSION: START+END+TOP10+NAMEPICK+HIGHLIGHT-v2.4-HOW-ONLY-ON-FIRSTLOAD");
 
 /* =========================
    ROOT
@@ -120,7 +120,7 @@ root.innerHTML = `
           You have <b>30 seconds</b> each round.
         </div>
 
-        <!-- How it works ONLY here (default hidden) -->
+        <!-- How it works ONLY here (✅ default hidden to prevent flash) -->
         <div class="chainHow chainHowInOverlay" id="chainHow" style="display:none;">
           <div class="chainHowTitle">How it works</div>
           <div class="chainHowBody">
@@ -364,10 +364,8 @@ let gameStarted = false;
 let highlightName: string | null = null;
 let highlightUntil = 0;
 
-// ✅ swap behavior:
-// - first load: overlay shows intro (no how)
-// - restart/play again: overlay shows how
-let showHowOnNextStartOverlay = false;
+// ✅ SHOW "How it works" ONLY on first page load (per refresh)
+let howShownOnce = false;
 
 function setHowVisible(visible: boolean) {
   const howEl = document.getElementById("chainHow") as HTMLDivElement | null;
@@ -626,13 +624,10 @@ function qualifiesForTop10(points: number, list: Array<{ points: number }>): boo
 function showStartOverlay() {
   if (startOverlayEl) startOverlayEl.style.display = "flex";
 
-  // ✅ SWAPPED:
-  // - first load: showHowOnNextStartOverlay is false
-  // - restart/play again sets it true
-  setHowVisible(showHowOnNextStartOverlay);
-
-  // consume flag so next open goes back to intro unless restart sets it again
-  showHowOnNextStartOverlay = false;
+  // ✅ first page load: show "How it works"
+  // ✅ restart/play again: do NOT show it
+  setHowVisible(!howShownOnce);
+  howShownOnce = true;
 }
 
 function hideStartOverlay() {
@@ -941,7 +936,6 @@ function rememberLast(a: Rule, b: Rule) {
 }
 
 function pickNextTwoRules(all: Rule[]) {
-  // ✅ debug fixed
   if (DEBUG_RULES_ENABLED) {
     console.warn("[DEBUG] Using fixed chain rules");
     return DEBUG_CHAIN_RULES;
@@ -960,7 +954,10 @@ function pickNextTwoRules(all: Rule[]) {
           const k = normKey((r as any).key);
           const lab = String((r as any).label ?? "").trim().toLowerCase();
 
+          // keys that typically mean "effect text"
           if (k === "desc" || k === "desclength" || k === "text" || k === "effect" || k === "description") return false;
+
+          // labels like: "mentions draw", "mentions gy", etc.
           if (lab.startsWith("mentions ") || lab.includes("mentions ")) return false;
         }
 
@@ -1353,8 +1350,7 @@ document.getElementById("chainRestart")?.addEventListener("click", () => {
 
   hideEndOverlay();
 
-  // ✅ restart/play again -> next start overlay shows HOW
-  showHowOnNextStartOverlay = true;
+  // ✅ Restart / Play again: should NOT show "How it works"
   showStartOverlay();
 
   streak = 0;
@@ -1385,7 +1381,7 @@ document.getElementById("chainRestart")?.addEventListener("click", () => {
 });
 
 endRestartEl?.addEventListener("click", () => {
-  // Play again uses same restart flow (shows HOW)
+  // Play again uses the same restart flow (✅ will NOT show How it works)
   (document.getElementById("chainRestart") as HTMLButtonElement | null)?.click();
 });
 
@@ -1422,6 +1418,7 @@ async function init() {
     CARDS = await loadAllCards();
     RULES = await loadRules();
 
+    // ✅ detect whether our card data actually contains descriptions/effect text
     HAS_DESC_DATA = computeHasDescData(CARDS);
     if (!HAS_DESC_DATA) {
       console.warn("[chain] Card dataset has no desc/text. Disabling 'mentions/desc' rules in Chain Mode.");
@@ -1449,8 +1446,8 @@ async function init() {
     lastSigB = null;
     recentSigs.length = 0;
 
-    // ✅ FIRST LOAD: show overlay WITHOUT how
-    showHowOnNextStartOverlay = false;
+    // ✅ First load: show overlay WITH "How it works"
+    howShownOnce = false;
     showStartOverlay();
   } catch (e) {
     console.error("[chain] init failed:", e);
