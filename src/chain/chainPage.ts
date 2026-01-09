@@ -1,6 +1,4 @@
 // chainPage.ts (or chain.ts) — Chain Mode page logic
-import { DEBUG_CHAIN_RULES_ENABLED, DEBUG_CHAIN_RULES } from "../debugRules";
-
 import type { Card, Rule } from "../engine/engine";
 import { mulberry32, dateSeed, matches, rulesCompatible } from "../engine/engine";
 import { loadAllCards } from "../data/loadAllCards";
@@ -704,14 +702,6 @@ function intersectCountUpTo(a: Uint32Array, b: Uint32Array, cap: number): number
 /* =========================
    PICK RULES (bulletproof)
    ========================= */
-function pickNextTwoRulesDebug(all: Rule[]) {
-  if (DEBUG_CHAIN_RULES_ENABLED) {
-    console.log("[CHAIN DEBUG] Using fixed rules");
-    const [a, b] = DEBUG_CHAIN_RULES;
-    return { a, b, cnt: 2 };
-  }
-  return pickNextTwoRules(all);
-}
 
 function pickNextTwoRules(all: Rule[]) {
   const MIN_SOL = 80;
@@ -959,7 +949,7 @@ function pickById(id: string) {
   updateStreakBadge(streak);
 
   requestAnimationFrame(() => {
-    const next = pickNextTwoRulesDebug(RULES);
+    const next = pickNextTwoRules(RULES);
     ruleA = next.a;
     ruleB = next.b;
     setRuleUI();
@@ -1040,7 +1030,7 @@ document.addEventListener("click", (e) => {
   inputEl.disabled = true;
 
   requestAnimationFrame(() => {
-    const next = pickNextTwoRulesDebug(RULES);
+    const next = pickNextTwoRules(RULES);
     ruleA = next.a;
     ruleB = next.b;
     setRuleUI();
@@ -1095,7 +1085,7 @@ async function init() {
 
     await new Promise(requestAnimationFrame);
 
-    const next = pickNextTwoRulesDebug(RULES);
+    const next = pickNextTwoRules(RULES);
     ruleA = next.a;
     ruleB = next.b;
     setRuleUI();
