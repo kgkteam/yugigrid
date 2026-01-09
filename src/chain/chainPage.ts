@@ -3,7 +3,7 @@ import type { Card, Rule } from "../engine/engine";
 import { mulberry32, dateSeed, matches, rulesCompatible } from "../engine/engine";
 import { loadAllCards } from "../data/loadAllCards";
 
-console.log("CHAINPAGE VERSION: START+HELP-IN-POPUP+ENDSCREEN+TOP10-NAMEPICK+HIGHLIGHT-v2");
+console.log("CHAINPAGE VERSION: START+HELP-IN-POPUP+ENDSCREEN+TOP10-NAMEPICK+HIGHLIGHT-v2.1-FIX");
 
 /* =========================
    ROOT
@@ -19,6 +19,8 @@ root.innerHTML = `
         <div class="chainHeaderSlot"></div>
 
         <div class="chainBrand">
+          <div class="chainBrandTitle">Chain Mode</div>
+          <div class="chainBrandSub">Pick a card that matches BOTH rules. 30s per round.</div>
         </div>
 
         <a class="chainBackBtn" href="./index.html">← Back to Grid</a>
@@ -361,22 +363,32 @@ let gameStarted = false;
 let highlightName: string | null = null;
 let highlightUntil = 0;
 
-const inputEl = document.getElementById("chainInput") as HTMLInputElement;
-const dropEl = document.getElementById("chainDrop") as HTMLDivElement;
-const msgEl = document.getElementById("chainMsg") as HTMLDivElement;
-const nameEl = document.getElementById("chainCardName") as HTMLDivElement;
-const imgEl = document.getElementById("chainCardImg") as HTMLImageElement;
-const streakEl = document.getElementById("chainStreak") as HTMLSpanElement;
-const scoreEl = document.getElementById("chainScoreText") as HTMLSpanElement;
+/* =========================
+   DOM (safe)
+   ========================= */
 
-const rulesWrapEl = document.getElementById("chainRules") as HTMLDivElement;
-const toastEl = document.getElementById("chainToast") as HTMLDivElement;
+function mustGet<T extends HTMLElement>(id: string): T {
+  const el = document.getElementById(id);
+  if (!el) throw new Error(`Missing element #${id}`);
+  return el as T;
+}
+
+const inputEl = mustGet<HTMLInputElement>("chainInput");
+const dropEl = mustGet<HTMLDivElement>("chainDrop");
+const msgEl = mustGet<HTMLDivElement>("chainMsg");
+const nameEl = mustGet<HTMLDivElement>("chainCardName");
+const imgEl = mustGet<HTMLImageElement>("chainCardImg");
+const streakEl = mustGet<HTMLSpanElement>("chainStreak");
+const scoreEl = mustGet<HTMLSpanElement>("chainScoreText");
+
+const rulesWrapEl = mustGet<HTMLDivElement>("chainRules");
+const toastEl = mustGet<HTMLDivElement>("chainToast");
 const badgeEl = document.getElementById("streakBadge") as HTMLSpanElement | null;
 
 const usedWrapEl = document.getElementById("chainUsedWrap") as HTMLDivElement | null;
 const usedEl = document.getElementById("chainUsed") as HTMLDivElement | null;
 
-const topStatusEl = document.getElementById("chainTopStatus") as HTMLDivElement;
+const topStatusEl = mustGet<HTMLDivElement>("chainTopStatus");
 const top10ListEl = document.getElementById("top10List") as HTMLOListElement | null;
 
 // overlays
@@ -457,12 +469,47 @@ async function loadTop10() {
 
 /** 4 names, format ColorAnimal (PurpleTiger) */
 const COLORS = [
-  "Purple","Crimson","Scarlet","Ruby","Orange","Amber","Gold","Yellow","Lime","Green",
-  "Emerald","Teal","Cyan","Azure","Blue","Indigo","Violet","Pink","Magenta","Silver","White"
+  "Purple",
+  "Crimson",
+  "Scarlet",
+  "Ruby",
+  "Orange",
+  "Amber",
+  "Gold",
+  "Yellow",
+  "Lime",
+  "Green",
+  "Emerald",
+  "Teal",
+  "Cyan",
+  "Azure",
+  "Blue",
+  "Indigo",
+  "Violet",
+  "Pink",
+  "Magenta",
+  "Silver",
+  "White",
 ];
 const ANIMALS = [
-  "Tiger","Wolf","Fox","Hawk","Raven","Lynx","Viper","Panda","Otter","Koala",
-  "Lion","Eagle","Shark","Cobra","Falcon","Jaguar","Panther","Bear"
+  "Tiger",
+  "Wolf",
+  "Fox",
+  "Hawk",
+  "Raven",
+  "Lynx",
+  "Viper",
+  "Panda",
+  "Otter",
+  "Koala",
+  "Lion",
+  "Eagle",
+  "Shark",
+  "Cobra",
+  "Falcon",
+  "Jaguar",
+  "Panther",
+  "Bear",
 ];
 
 function randomName(): string {
@@ -580,8 +627,7 @@ function hideEndOverlay() {
 
 function setMsg(t: string, ok?: boolean) {
   msgEl.textContent = t;
-  msgEl.style.color =
-    ok === true ? "var(--ok)" : ok === false ? "var(--bad)" : "rgba(233,240,255,.85)";
+  msgEl.style.color = ok === true ? "var(--ok)" : ok === false ? "var(--bad)" : "rgba(233,240,255,.85)";
 }
 
 function setTopStatus(text: string, kind: "ok" | "bad" | "muted" = "muted") {
@@ -591,14 +637,12 @@ function setTopStatus(text: string, kind: "ok" | "bad" | "muted" = "muted") {
 }
 
 function showToast(t: string) {
-  if (!toastEl) return;
   toastEl.textContent = t;
   toastEl.classList.add("show");
   window.setTimeout(() => toastEl.classList.remove("show"), 850);
 }
 
 function renderRules(rules: string[]) {
-  if (!rulesWrapEl) return;
   rulesWrapEl.innerHTML = rules.map((r) => `<div class="chainRule">${r}</div>`).join("");
 }
 
@@ -649,9 +693,7 @@ function setRuleUI() {
 
 function showPicked(card: Card) {
   nameEl.textContent = card.name;
-  imgEl.src = `https://images.ygoprodeck.com/images/cards_small/${encodeURIComponent(
-    String(card.id)
-  )}.jpg`;
+  imgEl.src = `https://images.ygoprodeck.com/images/cards_small/${encodeURIComponent(String(card.id))}.jpg`;
   imgEl.style.display = "block";
 }
 
@@ -673,9 +715,7 @@ function renderUsed() {
       const c = e.card;
       const enterClass = idx === 0 ? "usedRowEnter" : "";
       const safeName = (c.name || "").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-      const img = `https://images.ygoprodeck.com/images/cards_small/${encodeURIComponent(
-        String(c.id)
-      )}.jpg`;
+      const img = `https://images.ygoprodeck.com/images/cards_small/${encodeURIComponent(String(c.id))}.jpg`;
 
       return `
       <div class="${enterClass}"
@@ -780,8 +820,7 @@ function ruleSig(r: Rule): string {
   const lab = (r as any).label;
 
   const vS = v === undefined ? "∅" : typeof v === "string" ? `s:${v}` : `j:${JSON.stringify(v)}`;
-  const v2S =
-    v2 === undefined ? "∅" : typeof v2 === "string" ? `s:${v2}` : `j:${JSON.stringify(v2)}`;
+  const v2S = v2 === undefined ? "∅" : typeof v2 === "string" ? `s:${v2}` : `j:${JSON.stringify(v2)}`;
   const labS = lab == null ? "∅" : String(lab);
 
   return `${k}|${op}|${vS}|${v2S}|${labS}`;
@@ -863,6 +902,18 @@ function intersectCountUpTo(a: Uint32Array, b: Uint32Array, cap: number): number
     else j++;
   }
   return cnt;
+}
+
+function pushRecent(sig: string) {
+  recentSigs.push(sig);
+  while (recentSigs.length > RECENT_LIMIT) recentSigs.shift();
+}
+
+function rememberLast(a: Rule, b: Rule) {
+  lastSigA = ruleSig(a);
+  lastSigB = ruleSig(b);
+  pushRecent(lastSigA);
+  pushRecent(lastSigB);
 }
 
 function pickNextTwoRules(all: Rule[]) {
@@ -969,7 +1020,7 @@ let timer: number | null = null;
 
 function updateTimerUI(secLeft: number, total: number) {
   const bar = document.getElementById("timerBarFill") as HTMLDivElement | null;
-  const tText = document.getElementById("chainTimeText");
+  const tText = document.getElementById("chainTimeText") as HTMLSpanElement | null;
 
   if (tText) tText.textContent = String(secLeft);
   if (!bar) return;
@@ -991,7 +1042,7 @@ function updateTimerUI(secLeft: number, total: number) {
 }
 
 function stopTimer() {
-  if (timer) window.clearInterval(timer);
+  if (timer != null) window.clearInterval(timer);
   timer = null;
 }
 
@@ -1025,9 +1076,7 @@ function renderDrop(list: Card[]) {
 
   dropEl.innerHTML = list
     .map((c) => {
-      const img = `https://images.ygoprodeck.com/images/cards_small/${encodeURIComponent(
-        String(c.id)
-      )}.jpg`;
+      const img = `https://images.ygoprodeck.com/images/cards_small/${encodeURIComponent(String(c.id))}.jpg`;
 
       return `
         <div class="chainOpt" data-id="${String(c.id)}">
@@ -1163,6 +1212,9 @@ function pickById(id: string) {
     ruleB = next.b;
     setRuleUI();
 
+    // remember last + recents AFTER we successfully advance
+    if (ruleA && ruleB) rememberLast(ruleA, ruleB);
+
     resetRoundAward();
     wrongThisRound = 0;
     setTopStatus("", "muted");
@@ -1218,7 +1270,7 @@ document.addEventListener("click", (e) => {
   hideDrop();
 });
 
-(document.getElementById("chainGiveUp") as HTMLButtonElement).addEventListener("click", () => {
+document.getElementById("chainGiveUp")?.addEventListener("click", () => {
   if (!gameStarted || gameEnded) return;
   void endGame("giveup");
 });
@@ -1242,6 +1294,9 @@ startBtnEl?.addEventListener("click", () => {
   ruleB = next.b;
   setRuleUI();
 
+  // seed recent tracking immediately so we don't repeat instantly
+  if (ruleA && ruleB) rememberLast(ruleA, ruleB);
+
   resetRoundAward();
   wrongThisRound = 0;
 
@@ -1252,7 +1307,11 @@ startBtnEl?.addEventListener("click", () => {
   startTimer();
 });
 
-(document.getElementById("chainRestart") as HTMLButtonElement).addEventListener("click", () => {
+document.getElementById("chainRestart")?.addEventListener("click", () => {
+  // hard reset
+  stopTimer();
+  updateTimerUI(30, 30);
+
   gameEnded = false;
   gameStarted = false;
 
@@ -1279,14 +1338,16 @@ startBtnEl?.addEventListener("click", () => {
   setTopStatus("Press Start to begin", "muted");
   showToast("Restarted");
 
-  stopTimer();
-  updateTimerUI(30, 30);
-
   inputEl.disabled = true;
+
+  // keep caches (faster), but reset “recent rules” so a fresh run feels fresh
+  lastSigA = null;
+  lastSigB = null;
+  recentSigs.length = 0;
 });
 
 endRestartEl?.addEventListener("click", () => {
-  (document.getElementById("chainRestart") as HTMLButtonElement)?.click();
+  (document.getElementById("chainRestart") as HTMLButtonElement | null)?.click();
 });
 
 /* =========================
@@ -1325,6 +1386,11 @@ async function init() {
 
     renderRules([]);
     inputEl.disabled = true;
+
+    // reset “recent rules” on load
+    lastSigA = null;
+    lastSigB = null;
+    recentSigs.length = 0;
 
     showStartOverlay();
   } catch (e) {
