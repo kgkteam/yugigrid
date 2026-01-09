@@ -6,6 +6,9 @@ const JSON_HEADERS: Record<string, string> = {
   "cache-control": "no-store",
 };
 
+// ✅ bump this anytime you redeploy to verify the live function updated
+const VERSION = "chainTop-2026-01-09-v2";
+
 type Entry = {
   name: string;
   points: number;
@@ -41,7 +44,6 @@ let MOCK_LIST: Entry[] = [
 function cleanName(x: unknown): string | null {
   const s = String(x ?? "").trim().replace(/\s+/g, " ");
   if (!s) return null;
-  // allow simple chars
   if (!/^[a-zA-Z0-9 _\-]+$/.test(s)) return null;
   if (s.length < 3) return null;
   return s.slice(0, 18);
@@ -52,24 +54,59 @@ export const handler: Handler = async (event) => {
     const key = "top10_global";
 
     // ✅ ADMIN: clear leaderboard (use once, then remove)
-    // Call: POST /.netlify/functions/chainTop  with body { "adminClear": true, "token": "<TOKEN>" }
+    // Call: POST /.netlify/functions/chainTop with body:
+    // { "adminClear": true, "token": "<TOKEN>" }
+    //
+    // Also supports GET param ?adminClear=1&token=<TOKEN> for easier testing:
+    // https://yugigrid.com/.netlify/functions/chainTop?adminClear=1&token=...
     const ADMIN_TOKEN = process.env.CHAIN_ADMIN_TOKEN || "";
 
-    if (event.httpMethod === "POST" && event.body) {
-      const body = JSON.parse(event.body);
-      if (body?.adminClear === true) {
+    const qs = event.queryStringParameters || {};
+    const wantsClearByGet =
+      event.httpMethod === "GET" && (qs.adminClear === "1" || qs.adminClear === "true");
+    const wantsClearByPost = event.httpMethod === "POST" && !!event.body;
+
+    if (wantsClearByGet || wantsClearByPost) {
+      let token = "";
+
+      if (wantsClearByGet) {
+        token = String(qs.token || "");
+      } else {
+        try {
+          const body = JSON.parse(event.body || "{}");
+          if (body?.adminClear === true) token = String(body?.token || "");
+          else token = ""; // normal POST continues below
+          if (body?.adminClear !== true) token = "";
+        } catch {
+          token = "";
+        }
+      }
+
+      // Only run clear if explicitly requested
+      const clearRequested =
+        wantsClearByGet ||
+        (() => {
+          try {
+            const body = JSON.parse(event.body || "{}");
+            return body?.adminClear === true;
+          } catch {
+            return false;
+          }
+        })();
+
+      if (clearRequested) {
         if (!ADMIN_TOKEN) {
           return {
             statusCode: 500,
             headers: JSON_HEADERS,
-            body: JSON.stringify({ ok: false, error: "Admin token not configured" }),
+            body: JSON.stringify({ ok: false, error: "Admin token not configured", version: VERSION }),
           };
         }
-        if (String(body?.token || "") !== ADMIN_TOKEN) {
+        if (!token || token !== ADMIN_TOKEN) {
           return {
             statusCode: 403,
             headers: JSON_HEADERS,
-            body: JSON.stringify({ ok: false, error: "Forbidden" }),
+            body: JSON.stringify({ ok: false, error: "Forbidden", version: VERSION }),
           };
         }
 
@@ -79,7 +116,7 @@ export const handler: Handler = async (event) => {
         return {
           statusCode: 200,
           headers: JSON_HEADERS,
-          body: JSON.stringify({ ok: true, cleared: true }),
+          body: JSON.stringify({ ok: true, cleared: true, version: VERSION }),
         };
       }
     }
@@ -92,7 +129,7 @@ export const handler: Handler = async (event) => {
         return {
           statusCode: 200,
           headers: JSON_HEADERS,
-          body: JSON.stringify({ list: MOCK_LIST }),
+          body: JSON.stringify({ version: VERSION, list: MOCK_LIST }),
         };
       }
 
@@ -101,7 +138,7 @@ export const handler: Handler = async (event) => {
           return {
             statusCode: 400,
             headers: JSON_HEADERS,
-            body: JSON.stringify({ ok: false, error: "Missing body" }),
+            body: JSON.stringify({ ok: false, error: "Missing body", version: VERSION }),
           };
         }
 
@@ -112,17 +149,13 @@ export const handler: Handler = async (event) => {
           return {
             statusCode: 400,
             headers: JSON_HEADERS,
-            body: JSON.stringify({ ok: false, error: "Invalid points" }),
+            body: JSON.stringify({ ok: false, error: "Invalid points", version: VERSION }),
           };
         }
 
         const nm = cleanName(name) ?? randomName();
 
-        MOCK_LIST.push({
-          name: nm,
-          points: p,
-          ts: Date.now(),
-        });
+        MOCK_LIST.push({ name: nm, points: p, ts: Date.now() });
 
         MOCK_LIST.sort((a, b) => {
           if (b.points !== a.points) return b.points - a.points;
@@ -134,14 +167,14 @@ export const handler: Handler = async (event) => {
         return {
           statusCode: 200,
           headers: JSON_HEADERS,
-          body: JSON.stringify({ ok: true, list: MOCK_LIST, changed: true }),
+          body: JSON.stringify({ ok: true, list: MOCK_LIST, changed: true, version: VERSION }),
         };
       }
 
       return {
         statusCode: 405,
         headers: JSON_HEADERS,
-        body: JSON.stringify({ ok: false, error: "Method Not Allowed" }),
+        body: JSON.stringify({ ok: false, error: "Method Not Allowed", version: VERSION }),
       };
     }
 
@@ -156,7 +189,7 @@ export const handler: Handler = async (event) => {
       return {
         statusCode: 200,
         headers: JSON_HEADERS,
-        body: JSON.stringify(data ?? { list: [] }),
+        body: JSON.stringify({ version: VERSION, ...(data ?? { list: [] }) }),
       };
     }
 
@@ -166,7 +199,7 @@ export const handler: Handler = async (event) => {
         return {
           statusCode: 400,
           headers: JSON_HEADERS,
-          body: JSON.stringify({ ok: false, error: "Missing body" }),
+          body: JSON.stringify({ ok: false, error: "Missing body", version: VERSION }),
         };
       }
 
@@ -177,7 +210,7 @@ export const handler: Handler = async (event) => {
         return {
           statusCode: 400,
           headers: JSON_HEADERS,
-          body: JSON.stringify({ ok: false, error: "Invalid points" }),
+          body: JSON.stringify({ ok: false, error: "Invalid points", version: VERSION }),
         };
       }
 
@@ -187,11 +220,7 @@ export const handler: Handler = async (event) => {
       // ✅ use real name if provided, else Anonymous
       const nm = cleanName(name) ?? "Anonymous";
 
-      list.push({
-        name: nm,
-        points: p,
-        ts: Date.now(),
-      });
+      list.push({ name: nm, points: p, ts: Date.now() });
 
       list.sort((a, b) => {
         if (b.points !== a.points) return b.points - a.points;
@@ -200,26 +229,25 @@ export const handler: Handler = async (event) => {
 
       const trimmed = list.slice(0, 10);
 
-      // ✅ always persist latest top10 (simple + reliable)
       await store.set(key, { list: trimmed });
 
       return {
         statusCode: 200,
         headers: JSON_HEADERS,
-        body: JSON.stringify({ ok: true, list: trimmed, changed: true }),
+        body: JSON.stringify({ ok: true, list: trimmed, changed: true, version: VERSION }),
       };
     }
 
     return {
       statusCode: 405,
       headers: JSON_HEADERS,
-      body: JSON.stringify({ ok: false, error: "Method Not Allowed" }),
+      body: JSON.stringify({ ok: false, error: "Method Not Allowed", version: VERSION }),
     };
   } catch (e: any) {
     return {
       statusCode: 500,
       headers: JSON_HEADERS,
-      body: JSON.stringify({ ok: false, error: e?.message ?? String(e) }),
+      body: JSON.stringify({ ok: false, error: e?.message ?? String(e), version: VERSION }),
     };
   }
 };
