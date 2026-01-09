@@ -3,7 +3,7 @@ import type { Card, Rule } from "../engine/engine";
 import { mulberry32, dateSeed, matches, rulesCompatible } from "../engine/engine";
 import { loadAllCards } from "../data/loadAllCards";
 
-console.log("CHAINPAGE VERSION: START+HELP-IN-POPUP+ENDSCREEN+TOP10-NAMEPICK+HIGHLIGHT-v2.2-HOWONCE");
+console.log("CHAINPAGE VERSION: START+END+TOP10+NAMEPICK+HIGHLIGHT-v2.3-HOW-ON-RESTART");
 
 /* =========================
    ROOT
@@ -119,8 +119,8 @@ root.innerHTML = `
           You have <b>30 seconds</b> each round.
         </div>
 
-        <!-- How it works ONLY here -->
-        <div class="chainHow chainHowInOverlay" id="chainHow">
+        <!-- How it works ONLY here (✅ default hidden to prevent flash) -->
+        <div class="chainHow chainHowInOverlay" id="chainHow" style="display:none;">
           <div class="chainHowTitle">How it works</div>
           <div class="chainHowBody">
             • Press <b>Start</b> to begin.<br/>
@@ -363,23 +363,12 @@ let gameStarted = false;
 let highlightName: string | null = null;
 let highlightUntil = 0;
 
-/* =========================
-   HOW-IT-WORKS (show once)
-   ========================= */
+// ✅ show How it works only when Restart / Play again is pressed
+let showHowOnNextStartOverlay = false;
 
-const HOW_SEEN_KEY = "yugigrid_chain_how_seen_v1";
-
-function hasSeenHow(): boolean {
-  try {
-    return localStorage.getItem(HOW_SEEN_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-function markSeenHow(): void {
-  try {
-    localStorage.setItem(HOW_SEEN_KEY, "1");
-  } catch {}
+function setHowVisible(visible: boolean) {
+  const howEl = document.getElementById("chainHow") as HTMLDivElement | null;
+  if (howEl) howEl.style.display = visible ? "block" : "none";
 }
 
 /* =========================
@@ -631,9 +620,9 @@ function qualifiesForTop10(points: number, list: Array<{ points: number }>): boo
 function showStartOverlay() {
   if (startOverlayEl) startOverlayEl.style.display = "flex";
 
-  // ✅ show How-it-works only once (first time ever)
-  const howEl = document.getElementById("chainHow") as HTMLDivElement | null;
-  if (howEl) howEl.style.display = hasSeenHow() ? "none" : "block";
+  // ✅ only show when requested (Restart / Play again)
+  setHowVisible(showHowOnNextStartOverlay);
+  showHowOnNextStartOverlay = false; // consume
 }
 function hideStartOverlay() {
   if (startOverlayEl) startOverlayEl.style.display = "none";
@@ -1305,9 +1294,6 @@ startBtnEl?.addEventListener("click", () => {
   if (gameEnded) return;
   if (!RULES.length) return;
 
-  // ✅ mark as seen so it won't show on restart/play again
-  markSeenHow();
-
   hideStartOverlay();
   hideEndOverlay();
 
@@ -1339,7 +1325,10 @@ document.getElementById("chainRestart")?.addEventListener("click", () => {
   gameStarted = false;
 
   hideEndOverlay();
-  showStartOverlay(); // ✅ How-it-works will be hidden after first Start
+
+  // ✅ only on Restart / Play again
+  showHowOnNextStartOverlay = true;
+  showStartOverlay();
 
   streak = 0;
   streakEl.textContent = "0";
@@ -1369,6 +1358,7 @@ document.getElementById("chainRestart")?.addEventListener("click", () => {
 });
 
 endRestartEl?.addEventListener("click", () => {
+  // Play again just uses the same restart flow (✅ will show How it works)
   (document.getElementById("chainRestart") as HTMLButtonElement | null)?.click();
 });
 
@@ -1413,7 +1403,9 @@ async function init() {
     lastSigB = null;
     recentSigs.length = 0;
 
-    showStartOverlay(); // ✅ How-it-works shown only if not seen yet
+    // ✅ first load: show overlay WITHOUT How it works
+    showHowOnNextStartOverlay = false;
+    showStartOverlay();
   } catch (e) {
     console.error("[chain] init failed:", e);
     setMsg("❌ Failed to init chain mode.", false);
