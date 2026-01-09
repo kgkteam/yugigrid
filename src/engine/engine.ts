@@ -344,13 +344,8 @@ export function matches(card: Card, rule: Rule): boolean {
 
   if (op === "between") {
       let ret = Number.isFinite(vn) && Number.isFinite(n1) && Number.isFinite(n2) && vn >= n1 && vn <= n2;
-      if (!ret && card.id === 33420078) {
-      console.log ("false because");
-      console.log ("vn: "  + vn);
-      console.log ("n1: "  + n1);
-      console.log ("n2: "  + n2);
-      }
-      
+
+      return ret;
 
   }
 
@@ -524,11 +519,6 @@ function rulesCompatibleSimple(a: Rule, b: Rule): boolean {
   const A_isST = isSpellTrapRule(a);
   const B_isST = isSpellTrapRule(b);
 
-  if (a.key === "effect" && b.key === "desc")
-    return false;
-
-  if (b.key === "effect" && a.key === "desc")
-    return false;
 
   if (a.key === "level" && (b.key === "rank" || b.key === "linkRating" || B_isST)) return false;
   if (b.key === "level" && (a.key === "rank" || a.key === "linkRating" || A_isST)) return false;
