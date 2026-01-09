@@ -3,7 +3,7 @@ import type { Card, Rule } from "../engine/engine";
 import { mulberry32, dateSeed, matches, rulesCompatible } from "../engine/engine";
 import { loadAllCards } from "../data/loadAllCards";
 
-console.log("CHAINPAGE VERSION: START+HELP-IN-POPUP+ENDSCREEN+TOP10-NAMEPICK+HIGHLIGHT-v2.1-FIX");
+console.log("CHAINPAGE VERSION: START+HELP-IN-POPUP+ENDSCREEN+TOP10-NAMEPICK+HIGHLIGHT-v2.2-HOWONCE");
 
 /* =========================
    ROOT
@@ -94,9 +94,9 @@ root.innerHTML = `
           </div>
         </div>
 
-        <aside class="chainTopPanel" aria-label="Global Top 10">
+        <aside class="chainTopPanel" aria-label="Top 10">
           <div class="chainTopPanelHead">
-            <div class="chainTopPanelTitle">🏆 Global Top 10</div>
+            <div class="chainTopPanelTitle">🏆Top 10</div>
             <button class="chainTopPanelBtn" id="lbRefresh" type="button">Refresh</button>
           </div>
 
@@ -364,6 +364,25 @@ let highlightName: string | null = null;
 let highlightUntil = 0;
 
 /* =========================
+   HOW-IT-WORKS (show once)
+   ========================= */
+
+const HOW_SEEN_KEY = "yugigrid_chain_how_seen_v1";
+
+function hasSeenHow(): boolean {
+  try {
+    return localStorage.getItem(HOW_SEEN_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+function markSeenHow(): void {
+  try {
+    localStorage.setItem(HOW_SEEN_KEY, "1");
+  } catch {}
+}
+
+/* =========================
    DOM (safe)
    ========================= */
 
@@ -535,7 +554,7 @@ function pickNameModal(finalScore: number): Promise<string | null> {
     modal.className = "lbModal";
 
     modal.innerHTML = `
-      <div class="lbModalTitle">🏆 Congrats! You made the Global Top 10</div>
+      <div class="lbModalTitle">🏆 Congrats! You made the Top 10</div>
       <div class="lbModalSub">
         Your score: <b>${finalScore}</b><br/>
         Choose a name:
@@ -611,6 +630,10 @@ function qualifiesForTop10(points: number, list: Array<{ points: number }>): boo
 
 function showStartOverlay() {
   if (startOverlayEl) startOverlayEl.style.display = "flex";
+
+  // ✅ show How-it-works only once (first time ever)
+  const howEl = document.getElementById("chainHow") as HTMLDivElement | null;
+  if (howEl) howEl.style.display = hasSeenHow() ? "none" : "block";
 }
 function hideStartOverlay() {
   if (startOverlayEl) startOverlayEl.style.display = "none";
@@ -1212,7 +1235,6 @@ function pickById(id: string) {
     ruleB = next.b;
     setRuleUI();
 
-    // remember last + recents AFTER we successfully advance
     if (ruleA && ruleB) rememberLast(ruleA, ruleB);
 
     resetRoundAward();
@@ -1283,6 +1305,9 @@ startBtnEl?.addEventListener("click", () => {
   if (gameEnded) return;
   if (!RULES.length) return;
 
+  // ✅ mark as seen so it won't show on restart/play again
+  markSeenHow();
+
   hideStartOverlay();
   hideEndOverlay();
 
@@ -1294,7 +1319,6 @@ startBtnEl?.addEventListener("click", () => {
   ruleB = next.b;
   setRuleUI();
 
-  // seed recent tracking immediately so we don't repeat instantly
   if (ruleA && ruleB) rememberLast(ruleA, ruleB);
 
   resetRoundAward();
@@ -1308,7 +1332,6 @@ startBtnEl?.addEventListener("click", () => {
 });
 
 document.getElementById("chainRestart")?.addEventListener("click", () => {
-  // hard reset
   stopTimer();
   updateTimerUI(30, 30);
 
@@ -1316,7 +1339,7 @@ document.getElementById("chainRestart")?.addEventListener("click", () => {
   gameStarted = false;
 
   hideEndOverlay();
-  showStartOverlay();
+  showStartOverlay(); // ✅ How-it-works will be hidden after first Start
 
   streak = 0;
   streakEl.textContent = "0";
@@ -1340,7 +1363,6 @@ document.getElementById("chainRestart")?.addEventListener("click", () => {
 
   inputEl.disabled = true;
 
-  // keep caches (faster), but reset “recent rules” so a fresh run feels fresh
   lastSigA = null;
   lastSigB = null;
   recentSigs.length = 0;
@@ -1387,12 +1409,11 @@ async function init() {
     renderRules([]);
     inputEl.disabled = true;
 
-    // reset “recent rules” on load
     lastSigA = null;
     lastSigB = null;
     recentSigs.length = 0;
 
-    showStartOverlay();
+    showStartOverlay(); // ✅ How-it-works shown only if not seen yet
   } catch (e) {
     console.error("[chain] init failed:", e);
     setMsg("❌ Failed to init chain mode.", false);
