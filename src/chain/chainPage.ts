@@ -1,11 +1,9 @@
-// chainPage.ts (or chain.ts) — Chain Mode page logic
+// chainPage.ts — Chain Mode page logic (START button + help text + end screen + Top10 name pick + NEW highlight)
 import type { Card, Rule } from "../engine/engine";
 import { mulberry32, dateSeed, matches, rulesCompatible } from "../engine/engine";
 import { loadAllCards } from "../data/loadAllCards";
 
-console.log(
-  "CHAINPAGE VERSION: LEVELFIX-FINAL+SIGFIX+RECENT5+SCORE+FIRSTTRY+ANIM+TOPSTATUS+USEDPTS+SHAKE+GLOBALTOP10-SEPARATEPANEL+CENTERLOCK+TOP10FIX+NAMEPICK-v1"
-);
+console.log("CHAINPAGE VERSION: START+HELP+ENDSCREEN+TOP10-NAMEPICK+HIGHLIGHT-v1");
 
 /* =========================
    ROOT
@@ -22,26 +20,20 @@ root.innerHTML = `
 
         <div class="chainBrand">
           <div class="chainBrandTitle">Chain Mode</div>
-          <div class="chainBrandSub">You have 30 seconds to find the correct card and build a streak!</div>
+          <div class="chainBrandSub">Pick a card that matches BOTH rules. 30s per round.</div>
         </div>
 
         <a class="chainBackBtn" href="./index.html">← Back to Grid</a>
       </div>
     </div>
 
-    <!-- OUTER LAYOUT: keeps chainPanel truly centered by adding a left spacer equal to right panel -->
     <div class="chainStage">
       <div class="chainStageInner">
 
-        <!-- LEFT SPACER (same width as right panel) -->
         <div class="chainLeftSpacer" aria-hidden="true"></div>
 
-        <!-- MAIN (CENTER) -->
         <div class="chainPanel">
-          <!-- TOP ROW: LEFT=Score, CENTER=Status, RIGHT=Time -->
-          <div class="chainTop"
-               style="display:grid; grid-template-columns: 1fr 2fr 1fr; align-items:center; gap:12px;">
-
+          <div class="chainTop" style="display:grid; grid-template-columns: 1fr 2fr 1fr; align-items:center; gap:12px;">
             <div style="display:flex; align-items:center; justify-content:flex-start;">
               <div class="pill">
                 <div class="pillLabel">Score</div>
@@ -50,15 +42,7 @@ root.innerHTML = `
             </div>
 
             <div id="chainTopStatus"
-                 style="
-                   display:flex;
-                   justify-content:center;
-                   align-items:center;
-                   font-weight:950;
-                   opacity:.9;
-                   text-align:center;
-                   min-height:28px;
-                 ">
+                 style="display:flex; justify-content:center; align-items:center; font-weight:950; opacity:.9; text-align:center; min-height:28px;">
             </div>
 
             <div style="display:flex; align-items:center; justify-content:flex-end;">
@@ -67,32 +51,41 @@ root.innerHTML = `
                 <div class="pillValue"><span id="chainTimeText">30</span>s</div>
               </div>
             </div>
-
           </div>
 
           <div class="timerBar">
             <div class="timerBarFill" id="timerBarFill"></div>
           </div>
 
-          <!-- RULES: centered -->
           <div class="chainRules" id="chainRules" style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap;"></div>
-
           <div class="chainRule" id="chainRuleText" style="display:none;">—</div>
+
+          <!-- Small help text (visible on load) -->
+          <div class="chainHow" id="chainHow">
+            <div class="chainHowTitle">How it works</div>
+            <div class="chainHowBody">
+              • Press <b>Start</b> to begin.<br/>
+              • You get <b>2 rules</b> — type a card name that matches <b>both</b>.<br/>
+              • Wrong answers <b>halve</b> the points for the round.<br/>
+              • You cannot reuse the last <b>5</b> correct cards.<br/>
+              • Each round has <b>30 seconds</b>. Time’s up = game over.
+            </div>
+          </div>
+
           <div class="chainToast" id="chainToast"></div>
 
           <input id="chainInput" class="search chainInput" placeholder="Type a card name…" autocomplete="off" />
           <div id="chainDrop" class="chainDrop" style="display:none;"></div>
 
-          <!-- RESULT ROW (we will clear it on correct) -->
           <div class="chainResultRow">
             <img id="chainCardImg" class="resultThumb" style="width:46px;height:64px;border-radius:10px;display:none;" />
             <div class="chainResultText" style="min-width:0;">
-              <div id="chainCardName" class="chainCardName" style="font-weight:950; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; opacity:.95;"></div>
+              <div id="chainCardName" class="chainCardName"
+                   style="font-weight:950; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; opacity:.95;"></div>
               <div id="chainMsg" class="chainMsg" style="margin-top:6px; font-weight:950; opacity:.85;"></div>
             </div>
           </div>
 
-          <!-- RECENTLY USED (last 5 correct answers) -->
           <div class="chainUsedWrap" id="chainUsedWrap" style="display:none; margin-top:12px;">
             <div class="chainUsedTitle" style="font-weight:900; opacity:.75; font-size:12px; margin-bottom:8px;">
               You cannot use these cards for the next pick
@@ -102,8 +95,8 @@ root.innerHTML = `
 
           <div class="chainActions" style="margin-top:14px; justify-content:space-between; display:flex; align-items:center;">
             <div style="display:flex; gap:10px;">
-              <button class="btn primary" id="chainRestart">Restart</button>
-              <button class="btn danger" id="chainGiveUp">Give up</button>
+              <button class="btn primary" id="chainRestart" type="button">Restart</button>
+              <button class="btn danger" id="chainGiveUp" type="button">Give up</button>
             </div>
 
             <div class="streakBox" style="font-weight:950; opacity:.85; display:flex; gap:8px; align-items:baseline;">
@@ -113,7 +106,6 @@ root.innerHTML = `
           </div>
         </div>
 
-        <!-- RIGHT (SEPARATE PANEL) -->
         <aside class="chainTopPanel" aria-label="Global Top 10">
           <div class="chainTopPanelHead">
             <div class="chainTopPanelTitle">🏆 Global Top 10</div>
@@ -129,11 +121,36 @@ root.innerHTML = `
 
       </div>
     </div>
+
+    <!-- START overlay -->
+    <div class="chainStartOverlay" id="chainStartOverlay">
+      <div class="chainStartCard">
+        <div class="chainStartTitle">Chain Mode</div>
+        <div class="chainStartSub">
+          Pick a card that matches <b>both</b> rules.<br/>
+          You have <b>30 seconds</b> each round.
+        </div>
+        <button class="btn primary" id="chainStartBtn" type="button">Start</button>
+      </div>
+    </div>
+
+    <!-- END overlay -->
+    <div class="chainEndOverlay" id="chainEndOverlay" style="display:none;">
+      <div class="chainEndCard">
+        <div class="chainEndTitle" id="chainEndTitle">Game Over</div>
+        <div class="chainEndSub" id="chainEndSub">Final score: 0</div>
+        <div class="chainEndActions">
+          <button class="btn primary" id="chainEndRestart" type="button">Play again</button>
+          <a class="btn" id="chainEndBack" href="./index.html">Back to Grid</a>
+        </div>
+      </div>
+    </div>
+
   </div>
 `;
 
 /* =========================
-   CSS (anim + shake + separate top panel + center lock + modal)
+   CSS
    ========================= */
 
 const style = document.createElement("style");
@@ -159,27 +176,21 @@ style.textContent = `
     box-shadow: 0 0 0 2px rgba(255,77,77,.35);
   }
 
-  /* ===== Outer layout that keeps MAIN truly centered ===== */
-  .chainStage{
-    width: 100%;
-    display: flex;
-    justify-content: center;
-  }
-
+  /* Center lock layout */
+  .chainStage{ width: 100%; display:flex; justify-content:center; }
   .chainStageInner{
     width: 100%;
-    display: grid;
+    display:grid;
     grid-template-columns: 340px minmax(560px, 680px) 340px;
     gap: 16px;
-    align-items: start;
-    justify-content: center;
+    align-items:start;
+    justify-content:center;
   }
-
-  .chainLeftSpacer{ grid-column: 1; }
-  .chainPanel{ grid-column: 2; min-width: 0; }
+  .chainLeftSpacer{ grid-column:1; }
+  .chainPanel{ grid-column:2; min-width:0; }
 
   .chainTopPanel{
-    grid-column: 3;
+    grid-column:3;
     position: sticky;
     top: 16px;
     border: 1px solid rgba(255,255,255,.12);
@@ -187,7 +198,7 @@ style.textContent = `
     border-radius: 16px;
     padding: 12px 14px;
     backdrop-filter: blur(10px);
-    align-self: start;
+    align-self:start;
   }
 
   @media (max-width: 1100px){
@@ -197,16 +208,8 @@ style.textContent = `
     .chainPanel{ grid-column: 1; }
   }
 
-  .chainTopPanelHead{
-    display:flex;
-    align-items:center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 10px;
-  }
-
-  .chainTopPanelTitle{ font-size: 13px; font-weight: 900; opacity: .9; }
-
+  .chainTopPanelHead{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+  .chainTopPanelTitle{ font-size:13px; font-weight:900; opacity:.9; }
   .chainTopPanelBtn{
     border: 1px solid rgba(255,255,255,.12);
     background: rgba(255,255,255,.06);
@@ -219,20 +222,64 @@ style.textContent = `
     opacity: .9;
   }
   .chainTopPanelBtn:hover{ background: rgba(255,255,255,.10); }
+  .chainTopPanelList{ margin:0; padding-left:18px; font-size:13px; }
+  .chainTopPanelList li{ margin-bottom:6px; opacity:.95; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .chainTopPanelFoot{ margin-top:10px; }
+  .chainTopPanelHint{ font-size:11px; opacity:.65; font-weight:900; }
 
-  .chainTopPanelList{ margin: 0; padding-left: 18px; font-size: 13px; }
-  .chainTopPanelList li{
-    margin-bottom: 6px;
-    opacity: .95;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  /* Help text */
+  .chainHow{
+    margin-top: 10px;
+    border: 1px solid rgba(255,255,255,.10);
+    background: rgba(255,255,255,.04);
+    border-radius: 14px;
+    padding: 10px 12px;
   }
+  .chainHowTitle{ font-weight: 950; font-size: 12px; opacity: .9; margin-bottom: 6px; }
+  .chainHowBody{ font-weight: 900; font-size: 11px; line-height: 1.35; opacity: .75; }
 
-  .chainTopPanelFoot{ margin-top: 10px; }
-  .chainTopPanelHint{ font-size: 11px; opacity: .65; font-weight: 900; }
+  /* Start overlay */
+  .chainStartOverlay{
+    position:fixed; inset:0; z-index:9000;
+    background: rgba(0,0,0,.62);
+    display:flex; align-items:center; justify-content:center;
+    padding:18px;
+  }
+  .chainStartCard{
+    width: min(520px, 100%);
+    border: 1px solid rgba(255,255,255,.14);
+    background: rgba(20,20,26,.92);
+    border-radius: 18px;
+    padding: 16px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 12px 40px rgba(0,0,0,.35);
+    text-align:center;
+  }
+  .chainStartTitle{ font-weight:950; font-size:18px; margin-bottom:6px; }
+  .chainStartSub{ opacity:.8; font-weight:900; font-size:12px; margin-bottom:12px; line-height:1.35; }
 
-  /* ===== Name pick modal ===== */
+  /* End overlay */
+  .chainEndOverlay{
+    position:fixed; inset:0; z-index:9500;
+    background: rgba(0,0,0,.62);
+    display:flex; align-items:center; justify-content:center;
+    padding:18px;
+  }
+  .chainEndCard{
+    width: min(520px, 100%);
+    border: 1px solid rgba(255,255,255,.14);
+    background: rgba(20,20,26,.92);
+    border-radius: 18px;
+    padding: 16px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 12px 40px rgba(0,0,0,.35);
+    text-align:center;
+  }
+  .chainEndTitle{ font-weight:950; font-size:18px; margin-bottom:6px; }
+  .chainEndSub{ opacity:.85; font-weight:900; font-size:13px; margin-bottom:12px; }
+  .chainEndActions{ display:flex; justify-content:center; gap:10px; }
+
+  /* Name pick modal */
   .lbModalOverlay{
     position:fixed; inset:0; z-index:9999;
     background: rgba(0,0,0,.62);
@@ -248,27 +295,10 @@ style.textContent = `
     backdrop-filter: blur(10px);
     box-shadow: 0 12px 40px rgba(0,0,0,.35);
   }
-  .lbModalTitle{
-    font-weight: 950;
-    font-size: 16px;
-    margin-bottom: 6px;
-  }
-  .lbModalSub{
-    opacity: .8;
-    font-weight: 900;
-    font-size: 12px;
-    margin-bottom: 12px;
-    line-height: 1.35;
-  }
-  .lbNameGrid{
-    display:grid;
-    grid-template-columns: 1fr;
-    gap: 10px;
-    margin-top: 10px;
-  }
-  @media(min-width: 520px){
-    .lbNameGrid{ grid-template-columns: 1fr 1fr; }
-  }
+  .lbModalTitle{ font-weight: 950; font-size: 16px; margin-bottom: 6px; }
+  .lbModalSub{ opacity: .8; font-weight: 900; font-size: 12px; margin-bottom: 12px; line-height: 1.35; }
+  .lbNameGrid{ display:grid; grid-template-columns: 1fr; gap: 10px; margin-top: 10px; }
+  @media(min-width: 520px){ .lbNameGrid{ grid-template-columns: 1fr 1fr; } }
   .lbNameBtn{
     border: 1px solid rgba(255,255,255,.14);
     background: rgba(255,255,255,.06);
@@ -282,10 +312,7 @@ style.textContent = `
   }
   .lbNameBtn:hover{ background: rgba(255,255,255,.10); }
   .lbNameBtn:active{ transform: scale(.99); }
-  .lbModalActions{
-    display:flex; justify-content:flex-end; gap:10px;
-    margin-top: 14px;
-  }
+  .lbModalActions{ display:flex; justify-content:flex-end; gap:10px; margin-top: 14px; }
   .lbCancelBtn{
     border: 1px solid rgba(255,255,255,.14);
     background: transparent;
@@ -307,7 +334,6 @@ document.head.appendChild(style);
 let CARDS: Card[] = [];
 let RULES: Rule[] = [];
 let CARD_NAME_LOWER: string[] = [];
-
 let CARD_BY_ID = new Map<string, Card>();
 
 const RULE_MATCH_CACHE = new Map<string, Uint32Array>();
@@ -325,6 +351,11 @@ const USED_LIMIT = 5;
 let usedEntries: UsedEntry[] = [];
 
 let gameEnded = false;
+let gameStarted = false;
+
+// Top10 new entry highlight
+let highlightName: string | null = null;
+let highlightUntil = 0;
 
 const inputEl = document.getElementById("chainInput") as HTMLInputElement;
 const dropEl = document.getElementById("chainDrop") as HTMLDivElement;
@@ -345,8 +376,17 @@ const usedEl = document.getElementById("chainUsed") as HTMLDivElement | null;
 const topStatusEl = document.getElementById("chainTopStatus") as HTMLDivElement;
 const top10ListEl = document.getElementById("top10List") as HTMLOListElement | null;
 
+// overlays
+const startOverlayEl = document.getElementById("chainStartOverlay") as HTMLDivElement | null;
+const startBtnEl = document.getElementById("chainStartBtn") as HTMLButtonElement | null;
+
+const endOverlayEl = document.getElementById("chainEndOverlay") as HTMLDivElement | null;
+const endTitleEl = document.getElementById("chainEndTitle") as HTMLDivElement | null;
+const endSubEl = document.getElementById("chainEndSub") as HTMLDivElement | null;
+const endRestartEl = document.getElementById("chainEndRestart") as HTMLButtonElement | null;
+
 /* =========================
-   GLOBAL TOP10 (Netlify Function) — FIXED + NAME PICK
+   GLOBAL TOP10 + NAME PICK
    ========================= */
 
 async function fetchJsonSafe(url: string, init?: RequestInit) {
@@ -355,10 +395,7 @@ async function fetchJsonSafe(url: string, init?: RequestInit) {
   const ct = (res.headers.get("content-type") || "").toLowerCase();
   const text = await res.text();
 
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status} ${res.statusText}: ${text.slice(0, 140)}`);
-  }
-
+  if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}: ${text.slice(0, 140)}`);
   if (!ct.includes("application/json")) {
     throw new Error(`Expected JSON, got "${ct}". First chars: ${text.slice(0, 80)}`);
   }
@@ -378,10 +415,25 @@ function renderTop10(list: Array<{ name: string; points: number }>) {
     return;
   }
 
+  const now = Date.now();
+  const activeHighlight = highlightName && now < highlightUntil ? highlightName : null;
+
   top10ListEl.innerHTML = "";
   for (const e of list) {
     const li = document.createElement("li");
-    li.textContent = `${e.name} — ${e.points}`;
+    const isNew = !!activeHighlight && e.name === activeHighlight;
+
+    li.innerHTML = isNew
+      ? `<b>${e.name}</b> — ${e.points} <span style="margin-left:6px; font-weight:950; opacity:.95;">NEW</span>`
+      : `${e.name} — ${e.points}`;
+
+    if (isNew) {
+      li.style.border = "1px solid rgba(255,255,255,.18)";
+      li.style.background = "rgba(255,255,255,.06)";
+      li.style.borderRadius = "10px";
+      li.style.padding = "6px 8px";
+    }
+
     top10ListEl.appendChild(li);
   }
 }
@@ -400,13 +452,20 @@ async function loadTop10() {
   }
 }
 
-const ADJ = ["Lucky", "Silent", "Rapid", "Golden", "Brave", "Cosmic", "Nova", "Icy", "Crimson", "Arcane"];
-const NOUN = ["Fox", "Wolf", "Panda", "Hawk", "Otter", "Tiger", "Raven", "Lynx", "Viper", "Koala"];
+/** 4 names, format ColorAnimal (PurpleTiger) */
+const COLORS = [
+  "Purple","Crimson","Scarlet","Ruby","Orange","Amber","Gold","Yellow","Lime","Green",
+  "Emerald","Teal","Cyan","Azure","Blue","Indigo","Violet","Pink","Magenta","Silver","White"
+];
+const ANIMALS = [
+  "Tiger","Wolf","Fox","Hawk","Raven","Lynx","Viper","Panda","Otter","Koala",
+  "Lion","Eagle","Shark","Cobra","Falcon","Jaguar","Panther","Bear"
+];
 
 function randomName(): string {
-  const a = ADJ[Math.floor(Math.random() * ADJ.length)];
-  const n = NOUN[Math.floor(Math.random() * NOUN.length)];
-  return `${a} ${n}`;
+  const c = COLORS[Math.floor(Math.random() * COLORS.length)];
+  const a = ANIMALS[Math.floor(Math.random() * ANIMALS.length)];
+  return `${c}${a}`;
 }
 
 function uniqueNames(n: number): string[] {
@@ -416,7 +475,7 @@ function uniqueNames(n: number): string[] {
 }
 
 function pickNameModal(finalScore: number): Promise<string | null> {
-  const names = uniqueNames(5);
+  const names = uniqueNames(4);
 
   return new Promise((resolve) => {
     const overlay = document.createElement("div");
@@ -429,7 +488,7 @@ function pickNameModal(finalScore: number): Promise<string | null> {
       <div class="lbModalTitle">🏆 Congrats! You made the Global Top 10</div>
       <div class="lbModalSub">
         Your score: <b>${finalScore}</b><br/>
-        Choose a name (you’ll appear with this on the leaderboard):
+        Choose a name:
       </div>
       <div class="lbNameGrid" id="lbNameGrid"></div>
       <div class="lbModalActions">
@@ -496,72 +555,25 @@ function qualifiesForTop10(points: number, list: Array<{ points: number }>): boo
   return points > min; // strict better than 10th place
 }
 
-async function endGame(reason: "time" | "giveup") {
-  if (gameEnded) return;
-  gameEnded = true;
-
-  stopTimer();
-  hideDrop();
-  inputEl.disabled = true;
-
-  if (reason === "time") {
-    setTopStatus(`Time’s up! • Score: ${score}`);
-    showToast("Time's up!");
-  } else {
-    setTopStatus(`🏳️ Gave up. • Score: ${score}`);
-    showToast("Gave up");
-  }
-
-  setMsg("");
-
-  // ✅ end flow:
-  // - fetch current top10
-  // - if you qualify, show congrats + pick 1 of 5 names
-  // - submit with chosen name
-  // - always refresh
-  try {
-    const cur = await fetchJsonSafe("/.netlify/functions/chainTop");
-    const list = (cur?.list ?? []) as Array<{ name: string; points: number }>;
-
-    let chosenName: string | null = null;
-    if (qualifiesForTop10(score, list)) {
-      chosenName = await pickNameModal(score);
-      // If skipped, avoid Anonymous by assigning a random name
-      if (!chosenName) chosenName = randomName();
-    }
-
-    await submitPoints(score, chosenName);
-  } catch (e) {
-    console.error("[Top10] endGame flow failed:", e);
-    try {
-      await loadTop10();
-    } catch {}
-  }
-}
-
 /* =========================
-   NORMALIZE
+   HELPERS (UI)
    ========================= */
 
-function normKey(k: unknown): string {
-  return String(k ?? "")
-    .replace(/\s+/g, "")
-    .replace(/[\u200B-\u200D\uFEFF]/g, "")
-    .trim()
-    .toLowerCase();
+function showStartOverlay() {
+  if (startOverlayEl) startOverlayEl.style.display = "flex";
+}
+function hideStartOverlay() {
+  if (startOverlayEl) startOverlayEl.style.display = "none";
 }
 
-function normOp(op: unknown): string {
-  return String(op ?? "").trim().toLowerCase();
+function showEndOverlay(title: string, sub: string) {
+  if (endTitleEl) endTitleEl.textContent = title;
+  if (endSubEl) endSubEl.textContent = sub;
+  if (endOverlayEl) endOverlayEl.style.display = "flex";
 }
-
-function normLabel(x: unknown): string {
-  return String(x ?? "").replace(/\s+/g, " ").trim().toLowerCase();
+function hideEndOverlay() {
+  if (endOverlayEl) endOverlayEl.style.display = "none";
 }
-
-/* =========================
-   HELPERS
-   ========================= */
 
 function setMsg(t: string, ok?: boolean) {
   msgEl.textContent = t;
@@ -572,11 +584,7 @@ function setMsg(t: string, ok?: boolean) {
 function setTopStatus(text: string, kind: "ok" | "bad" | "muted" = "muted") {
   topStatusEl.textContent = text;
   topStatusEl.style.color =
-    kind === "ok"
-      ? "var(--ok)"
-      : kind === "bad"
-      ? "var(--bad)"
-      : "rgba(233,240,255,.85)";
+    kind === "ok" ? "var(--ok)" : kind === "bad" ? "var(--bad)" : "rgba(233,240,255,.85)";
 }
 
 function showToast(t: string) {
@@ -617,6 +625,33 @@ function clearPickedUI() {
   setMsg("");
 }
 
+function resetUsed() {
+  usedEntries = [];
+  renderUsed();
+}
+
+function updateStreakBadge(n: number) {
+  if (!badgeEl) return;
+  if (n >= 20) badgeEl.textContent = "💀 INSANE";
+  else if (n >= 10) badgeEl.textContent = "⚡ HOT";
+  else if (n >= 5) badgeEl.textContent = "🔥 NICE";
+  else badgeEl.textContent = "";
+}
+
+function setRuleUI() {
+  const a = ruleA?.label ?? String(ruleA?.key ?? "—");
+  const b = ruleB?.label ?? String(ruleB?.key ?? "—");
+  renderRules([a, b]);
+}
+
+function showPicked(card: Card) {
+  nameEl.textContent = card.name;
+  imgEl.src = `https://images.ygoprodeck.com/images/cards_small/${encodeURIComponent(
+    String(card.id)
+  )}.jpg`;
+  imgEl.style.display = "block";
+}
+
 function renderUsed() {
   if (!usedWrapEl || !usedEl) return;
 
@@ -653,9 +688,7 @@ function renderUsed() {
         "
       >
         <div style="display:flex; align-items:center; gap:10px; min-width:0;">
-          <img src="${img}" alt=""
-            style="width:34px;height:48px;border-radius:10px; flex:0 0 auto;"
-          />
+          <img src="${img}" alt="" style="width:34px;height:48px;border-radius:10px; flex:0 0 auto;" />
           <div style="min-width:0;">
             <div style="font-weight:950; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
               ${safeName}
@@ -676,32 +709,22 @@ function renderUsed() {
     .join("");
 }
 
-function resetUsed() {
-  usedEntries = [];
-  renderUsed();
-}
+/* =========================
+   NORMALIZE
+   ========================= */
 
-function updateStreakBadge(n: number) {
-  if (!badgeEl) return;
-  if (n >= 20) badgeEl.textContent = "💀 INSANE";
-  else if (n >= 10) badgeEl.textContent = "⚡ HOT";
-  else if (n >= 5) badgeEl.textContent = "🔥 NICE";
-  else badgeEl.textContent = "";
+function normKey(k: unknown): string {
+  return String(k ?? "")
+    .replace(/\s+/g, "")
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .trim()
+    .toLowerCase();
 }
-
-function setRuleUI() {
-  const a = ruleA?.label ?? String(ruleA?.key ?? "—");
-  const b = ruleB?.label ?? String(ruleB?.key ?? "—");
-  ruleEl.textContent = `${a} + ${b}`;
-  renderRules([a, b]);
+function normOp(op: unknown): string {
+  return String(op ?? "").trim().toLowerCase();
 }
-
-function showPicked(card: Card) {
-  nameEl.textContent = card.name;
-  imgEl.src = `https://images.ygoprodeck.com/images/cards_small/${encodeURIComponent(
-    String(card.id)
-  )}.jpg`;
-  imgEl.style.display = "block";
+function normLabel(x: unknown): string {
+  return String(x ?? "").replace(/\s+/g, " ").trim().toLowerCase();
 }
 
 /* =========================
@@ -731,7 +754,7 @@ async function loadRules(): Promise<Rule[]> {
 }
 
 /* =========================
-   RNG (stable + varied)
+   RNG
    ========================= */
 
 const day = (Number(dateSeed().s) || 123456) >>> 0;
@@ -743,13 +766,12 @@ function randInt(max: number): number {
 }
 
 /* =========================
-   RULE SIG (no collisions)
+   PICK RULES (your existing logic)
    ========================= */
 
 function ruleSig(r: Rule): string {
   const k = normKey((r as any).key);
   const op = normOp((r as any).op);
-
   const v = (r as any).value;
   const v2 = (r as any).value2;
   const lab = (r as any).label;
@@ -765,23 +787,11 @@ function ruleSig(r: Rule): string {
 let lastSigA: string | null = null;
 let lastSigB: string | null = null;
 
-/* =========================
-   RECENT RULE MEMORY
-   ========================= */
-
 const RECENT_LIMIT = 10;
 const recentSigs: string[] = [];
 
-/* =========================
-   RULE BLACKLIST
-   ========================= */
-
 const RULE_BLACKLIST_KEYS_RAW: Array<Rule["key"]> = ["banlistEver", "nameLength"];
 const RULE_BLACKLIST_KEYS = new Set(RULE_BLACKLIST_KEYS_RAW.map(normKey));
-
-/* =========================
-   RULE DEDUPE
-   ========================= */
 
 function dedupeRules(rules: Rule[]): Rule[] {
   const seen = new Set<string>();
@@ -794,10 +804,6 @@ function dedupeRules(rules: Rule[]): Rule[] {
   }
   return out;
 }
-
-/* =========================
-   RULE FAMILY
-   ========================= */
 
 function keyFamily(r: Rule): string {
   const k = normKey((r as any).key);
@@ -820,10 +826,6 @@ function keyFamily(r: Rule): string {
 
   return k;
 }
-
-/* =========================
-   MATCH CACHE
-   ========================= */
 
 function getRuleMatchList(rule: Rule): Uint32Array {
   const sig = ruleSig(rule);
@@ -859,10 +861,6 @@ function intersectCountUpTo(a: Uint32Array, b: Uint32Array, cap: number): number
   }
   return cnt;
 }
-
-/* =========================
-   PICK RULES (bulletproof)
-   ========================= */
 
 function pickNextTwoRules(all: Rule[]) {
   const MIN_SOL = 80;
@@ -960,7 +958,7 @@ function pickNextTwoRules(all: Rule[]) {
 }
 
 /* =========================
-   TIMER (bar)
+   TIMER
    ========================= */
 
 let time = 30;
@@ -1000,13 +998,10 @@ function startTimer() {
   updateTimerUI(time, 30);
 
   timer = window.setInterval(() => {
-    if (gameEnded) return;
+    if (gameEnded || !gameStarted) return;
     time--;
     updateTimerUI(time, 30);
-
-    if (time <= 0) {
-      void endGame("time");
-    }
+    if (time <= 0) void endGame("time");
   }, 1000);
 }
 
@@ -1030,12 +1025,13 @@ function renderDrop(list: Card[]) {
       const img = `https://images.ygoprodeck.com/images/cards_small/${encodeURIComponent(
         String(c.id)
       )}.jpg`;
+
       return `
-      <div class="chainOpt" data-id="${String(c.id)}">
-        <img class="chainOptImg" src="${img}" alt="">
-        <div class="chainOptName">${c.name}</div>
-      </div>
-    `;
+        <div class="chainOpt" data-id="${String(c.id)}">
+          <img class="chainOptImg" src="${img}" alt="">
+          <div class="chainOptName">${c.name}</div>
+        </div>
+      `;
     })
     .join("");
 
@@ -1059,11 +1055,60 @@ function getFiltered(q: string): Card[] {
 }
 
 /* =========================
+   END GAME
+   ========================= */
+
+async function endGame(reason: "time" | "giveup") {
+  if (gameEnded) return;
+  gameEnded = true;
+  gameStarted = false;
+
+  stopTimer();
+  hideDrop();
+  inputEl.disabled = true;
+
+  if (reason === "time") {
+    setTopStatus(`Time’s up! • Score: ${score}`);
+    showToast("Time's up!");
+    showEndOverlay("⏱ Time’s up!", `Final score: ${score}`);
+  } else {
+    setTopStatus(`🏳️ Gave up. • Score: ${score}`);
+    showToast("Gave up");
+    showEndOverlay("🏳️ You gave up", `Final score: ${score}`);
+  }
+
+  setMsg("");
+
+  try {
+    const cur = await fetchJsonSafe("/.netlify/functions/chainTop");
+    const list = (cur?.list ?? []) as Array<{ name: string; points: number }>;
+
+    let chosenName: string | null = null;
+    if (qualifiesForTop10(score, list)) {
+      chosenName = await pickNameModal(score);
+      if (!chosenName) chosenName = randomName();
+    }
+
+    if (chosenName) {
+      highlightName = chosenName;
+      highlightUntil = Date.now() + 6000;
+    }
+
+    await submitPoints(score, chosenName);
+  } catch (e) {
+    console.error("[Top10] endGame flow failed:", e);
+    try {
+      await loadTop10();
+    } catch {}
+  }
+}
+
+/* =========================
    PICK
    ========================= */
 
 function pickById(id: string) {
-  if (gameEnded) return;
+  if (gameEnded || !gameStarted) return;
 
   const card = CARD_BY_ID.get(id);
   if (!card || !ruleA || !ruleB) return;
@@ -1119,7 +1164,6 @@ function pickById(id: string) {
     wrongThisRound = 0;
     setTopStatus("", "muted");
 
-    console.log("[CHAIN] picked:", ruleA?.label, "+", ruleB?.label, "cnt=", next.cnt);
     startTimer();
     inputEl.focus();
   });
@@ -1132,6 +1176,7 @@ function pickById(id: string) {
 let searchT: number | null = null;
 
 inputEl.addEventListener("input", () => {
+  if (!gameStarted || gameEnded) return;
   if (searchT) window.clearTimeout(searchT);
   searchT = window.setTimeout(() => {
     const list = getFiltered(inputEl.value);
@@ -1140,6 +1185,8 @@ inputEl.addEventListener("input", () => {
 });
 
 inputEl.addEventListener("keydown", (e) => {
+  if (!gameStarted || gameEnded) return;
+
   if (e.key === "Escape") {
     hideDrop();
     inputEl.blur();
@@ -1153,6 +1200,8 @@ inputEl.addEventListener("keydown", (e) => {
 });
 
 dropEl.addEventListener("mousedown", (e) => {
+  if (!gameStarted || gameEnded) return;
+
   const t = e.target as HTMLElement | null;
   const opt = t?.closest(".chainOpt") as HTMLDivElement | null;
   const id = opt?.dataset?.id;
@@ -1166,8 +1215,48 @@ document.addEventListener("click", (e) => {
   hideDrop();
 });
 
-(document.getElementById("chainRestart") as HTMLButtonElement).addEventListener("click", () => {
+(document.getElementById("chainGiveUp") as HTMLButtonElement).addEventListener("click", () => {
+  if (!gameStarted || gameEnded) return;
+  void endGame("giveup");
+});
+
+document.getElementById("lbRefresh")?.addEventListener("click", () => {
+  void loadTop10();
+});
+
+startBtnEl?.addEventListener("click", () => {
+  if (gameEnded) return;
+  if (!RULES.length) return;
+
+  hideStartOverlay();
+  hideEndOverlay();
+
+  gameStarted = true;
   gameEnded = false;
+
+  // first round
+  const next = pickNextTwoRules(RULES);
+  ruleA = next.a;
+  ruleB = next.b;
+  setRuleUI();
+
+  resetRoundAward();
+  wrongThisRound = 0;
+
+  inputEl.disabled = false;
+  inputEl.focus();
+
+  setTopStatus("Good luck!", "muted");
+  startTimer();
+});
+
+(document.getElementById("chainRestart") as HTMLButtonElement).addEventListener("click", () => {
+  // reset everything but do NOT auto-start
+  gameEnded = false;
+  gameStarted = false;
+
+  hideEndOverlay();
+  showStartOverlay();
 
   streak = 0;
   streakEl.textContent = "0";
@@ -1178,39 +1267,26 @@ document.addEventListener("click", (e) => {
   wrongThisRound = 0;
   resetUsed();
 
+  ruleA = null;
+  ruleB = null;
+  renderRules([]);
+
   clearPickedUI();
   inputEl.value = "";
   hideDrop();
 
-  setTopStatus("", "muted");
+  setTopStatus("Press Start to begin", "muted");
   showToast("Restarted");
 
   stopTimer();
   updateTimerUI(30, 30);
 
   inputEl.disabled = true;
-
-  requestAnimationFrame(() => {
-    const next = pickNextTwoRules(RULES);
-    ruleA = next.a;
-    ruleB = next.b;
-    setRuleUI();
-
-    resetRoundAward();
-    wrongThisRound = 0;
-
-    inputEl.disabled = false;
-    inputEl.focus();
-    startTimer();
-  });
 });
 
-(document.getElementById("chainGiveUp") as HTMLButtonElement).addEventListener("click", () => {
-  void endGame("giveup");
-});
-
-document.getElementById("lbRefresh")?.addEventListener("click", () => {
-  void loadTop10();
+endRestartEl?.addEventListener("click", () => {
+  // same behavior as Restart (wait for Start)
+  (document.getElementById("chainRestart") as HTMLButtonElement)?.click();
 });
 
 /* =========================
@@ -1221,12 +1297,13 @@ async function init() {
   try {
     setMsg("");
     renderRules([]);
-    setTopStatus("", "muted");
+    setTopStatus("Press Start to begin", "muted");
 
     stopTimer();
     inputEl.disabled = true;
     updateTimerUI(30, 30);
 
+    // load Top10 ASAP
     void loadTop10();
 
     CARDS = await loadAllCards();
@@ -1235,7 +1312,9 @@ async function init() {
     CARD_BY_ID = new Map(CARDS.map((c) => [String(c.id), c]));
     CARD_NAME_LOWER = CARDS.map((c) => (c?.name ?? "").toLowerCase());
 
+    // initial state: not started
     gameEnded = false;
+    gameStarted = false;
 
     setScore(0);
     resetRoundAward();
@@ -1243,18 +1322,14 @@ async function init() {
     resetUsed();
     clearPickedUI();
 
-    await new Promise(requestAnimationFrame);
+    hideDrop();
+    updateTimerUI(30, 30);
 
-    const next = pickNextTwoRules(RULES);
-    ruleA = next.a;
-    ruleB = next.b;
-    setRuleUI();
+    // no rule yet, no timer
+    renderRules([]);
+    inputEl.disabled = true;
 
-    inputEl.disabled = false;
-    inputEl.focus();
-
-    console.log("[CHAIN] picked:", ruleA?.label, "+", ruleB?.label, "cnt=", next.cnt);
-    startTimer();
+    showStartOverlay();
   } catch (e) {
     console.error("[chain] init failed:", e);
     setMsg("❌ Failed to init chain mode.", false);
