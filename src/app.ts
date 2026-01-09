@@ -798,7 +798,6 @@ function normalizeCard(raw: YgoApiCard): Card {
   const isMonster = !isSpell && !isTrap;
 
   const isNormalMonster = isMonster && type === "Normal Monster";
-  const isEffectMonster = isMonster && !isNormalMonster;
 
   const toEnum = (s: unknown) =>
     String(s || "")
@@ -819,6 +818,7 @@ function normalizeCard(raw: YgoApiCard): Card {
   const isPendulum = hasTL("Pendulum");
   const isTuner = hasTL("Tuner");
   const isFlip = hasTL("Flip");
+  const isEffect = hasTL("Effect");
 
   let level: number | null = (raw as any).level ?? null;
   let rank: number | null = (raw as any).rank ?? null;
@@ -855,6 +855,7 @@ function normalizeCard(raw: YgoApiCard): Card {
     if (isRitual) tags.push("Ritual");
     if (isTuner) tags.push("Tuner");
     if (isFlip) tags.push("Flip");
+    if (isEffect) tags.push("Effect");
     return tags.join(" • ");
   })();
 
@@ -912,7 +913,7 @@ function normalizeCard(raw: YgoApiCard): Card {
     tuner: isTuner,
     flip: isFlip,
 
-    effect: isMonster ? isEffectMonster : null,
+    effect: isMonster ? isEffect : null,
     normal: isMonster ? isNormalMonster : null,
 
     kind: isSpell ? "spell" : isTrap ? "trap" : "monster",

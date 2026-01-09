@@ -2,6 +2,7 @@
 import type { Card, Rule } from "../engine/engine";
 import { mulberry32, dateSeed, matches, rulesCompatible } from "../engine/engine";
 import { loadAllCards } from "../data/loadAllCards";
+import { DEBUG_RULES_ENABLED, DEBUG_CHAIN_RULES } from "../debugRules";
 
 console.log("CHAINPAGE VERSION: START+END+TOP10+NAMEPICK+HIGHLIGHT-v2.4-HOW-ON-RESTART+NO-DESC-RULES");
 
@@ -932,6 +933,11 @@ function rememberLast(a: Rule, b: Rule) {
 }
 
 function pickNextTwoRules(all: Rule[]) {
+    if (DEBUG_RULES_ENABLED) {
+    console.warn("[DEBUG] Using fixed chain rules");
+    return DEBUG_CHAIN_RULES;
+  }
+
   const MIN_SOL = 80;
   const MAX_SOL = 2000;
 

@@ -176,6 +176,9 @@ export function matches(card: Card, rule: Rule): boolean {
       "spellType",
       "trapType",
       "hasRarity",
+      "nameLength",
+      "descLength",
+      "name"
     ]);
 
     if (!allowedST.has(rule.key)) return false;

@@ -63,6 +63,7 @@ export async function loadAllCards(): Promise<Card[]> {
       ritual: typeStr.includes("Ritual"),
       pendulum: typeStr.includes("Pendulum"),
       tuner: typeStr.includes("Tuner"),
+      effect: typeStr.includes("Effect"),
 
       kind,
 
