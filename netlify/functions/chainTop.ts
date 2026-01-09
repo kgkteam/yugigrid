@@ -7,7 +7,7 @@ const JSON_HEADERS: Record<string, string> = {
 };
 
 // ✅ bump this anytime you redeploy to verify the live function updated
-const VERSION = "chainTop-2026-01-09-v3";
+const VERSION = "chainTop-2026-01-09-v4";
 
 type Entry = {
   name: string;
@@ -49,32 +49,49 @@ function cleanName(x: unknown): string | null {
   return s.slice(0, 18);
 }
 
-// ✅ robust read: supports both stored JSON object and stored JSON string
+/**
+ * ✅ Robust read that never throws:
+ * - tries JSON typed read
+ * - if it fails (bad data), falls back to text read
+ */
 async function readTop10(store: ReturnType<typeof getStore>, key: string): Promise<Top10> {
-  const raw = (await store.get(key, { type: "json" })) as unknown;
+  // 1) Try JSON mode
+  try {
+    const raw = (await store.get(key, { type: "json" })) as unknown;
 
-  if (!raw) return { list: [] };
+    if (!raw) return { list: [] };
 
-  // if stored as object {list:[]}
-  if (typeof raw === "object" && raw !== null && Array.isArray((raw as any).list)) {
-    return { list: (raw as any).list as Entry[] };
-  }
+    // stored as object { list: [...] }
+    if (typeof raw === "object" && raw !== null && Array.isArray((raw as any).list)) {
+      return { list: (raw as any).list as Entry[] };
+    }
 
-  // if stored as JSON string (or something that got parsed weird)
-  if (typeof raw === "string") {
-    try {
+    // stored as JSON string (rare)
+    if (typeof raw === "string") {
       const parsed = JSON.parse(raw);
       if (parsed && Array.isArray(parsed.list)) return { list: parsed.list as Entry[] };
+    }
+
+    return { list: [] };
+  } catch {
+    // 2) Fallback: read as text and parse ourselves
+    try {
+      const txt = (await store.get(key, { type: "text" })) as unknown;
+      if (typeof txt !== "string" || !txt) return { list: [] };
+      const parsed = JSON.parse(txt);
+      if (parsed && Array.isArray(parsed.list)) return { list: parsed.list as Entry[] };
+      return { list: [] };
     } catch {
-      // ignore
+      return { list: [] };
     }
   }
-
-  return { list: [] };
 }
 
 export const handler: Handler = async (event) => {
   try {
+    // ✅ QUICK WIPE OPTION:
+    // Change this key to instantly "reset" the leaderboard without fighting old stored data.
+    // Example: "top10_global_v2"
     const key = "top10_global";
 
     /* =========================
@@ -89,14 +106,17 @@ export const handler: Handler = async (event) => {
     const clearByGet =
       event.httpMethod === "GET" && (qs.adminClear === "1" || qs.adminClear === "true");
 
-    const clearByPost = event.httpMethod === "POST" && !!event.body && (() => {
-      try {
-        const body = JSON.parse(event.body || "{}");
-        return body?.adminClear === true;
-      } catch {
-        return false;
-      }
-    })();
+    const clearByPost =
+      event.httpMethod === "POST" &&
+      !!event.body &&
+      (() => {
+        try {
+          const body = JSON.parse(event.body || "{}");
+          return body?.adminClear === true;
+        } catch {
+          return false;
+        }
+      })();
 
     if (clearByGet || clearByPost) {
       const token = clearByGet

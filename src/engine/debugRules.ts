@@ -2,7 +2,7 @@
 import type { Rule } from "./engine";
 
 // Kapcsold be local teszthez:
-export const DEBUG_RULES_ENABLED = true;
+export const DEBUG_RULES_ENABLED = false;
 
 // Itt adod meg kézzel a 3 row + 3 col rule-t
 // (olyan Rule objektumok legyenek, mint amiket a rules.json-ból is használsz)
