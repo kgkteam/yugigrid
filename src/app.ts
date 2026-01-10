@@ -531,7 +531,7 @@ async function pickCard(card: Card): Promise<void> {
 
 const shakeTimers = new Map<string, number>();
 
-function shakeCellRedRC(r: number, c: number, ms = 3000) {
+function shakeCellRedRC(r: number, c: number, ms = 950) {
   const b = $("board");
   if (!b) return;
 
@@ -543,7 +543,7 @@ function shakeCellRedRC(r: number, c: number, ms = 3000) {
   if (prev) window.clearTimeout(prev);
 
   cell.classList.remove("cellShake");
-  void cell.offsetWidth;
+  void cell.offsetWidth; // reflow
   cell.classList.add("cellShake");
 
   const t = window.setTimeout(() => {
@@ -553,6 +553,7 @@ function shakeCellRedRC(r: number, c: number, ms = 3000) {
 
   shakeTimers.set(key, t);
 }
+
 
 
 
