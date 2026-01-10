@@ -627,10 +627,16 @@ async function refreshCellPickPct(seedStr: string): Promise<void> {
 
       const arr = top3ByCell[k] || [];
       const hit = arr.find((x) => Number(x.cardId) === Number(card.id));
-      const count = hit ? Number(hit.cnt ?? 0) : 0;
+      if (!hit) {
+        // nincs adat (nem top3) -> ne írjunk ki kamu 0%-ot
+        cellPickPct[r][c] = null;
+        continue;
+      }
 
-      const pct = Math.round((count / total) * 1000) / 10; // 1 tizedes
-      cellPickPct[r][c] = pct;
+const count = Number(hit.cnt ?? 0);
+const pct = Math.round((count / total) * 1000) / 10; // 1 tizedes
+cellPickPct[r][c] = pct;
+
     }
   }
 }
@@ -652,9 +658,15 @@ function refreshCellPickPctFromStats(st: GlobalStats): void {
 
       const arr = top3ByCell[k] || [];
       const hit = arr.find((x) => Number(x.cardId) === Number(card.id));
-      const count = hit ? Number(hit.cnt ?? 0) : 0;
 
-      const pct = Math.round((count / total) * 1000) / 10;
+      if (!hit) {
+        // nincs adat (nem top3) -> ne írjunk ki kamu 0%-ot
+        cellPickPct[r][c] = null;
+        continue;
+      }
+
+      const count = Number(hit.cnt ?? 0);
+      const pct = Math.round((count / total) * 1000) / 10; // 1 tizedes
       cellPickPct[r][c] = pct;
     }
   }
@@ -691,7 +703,10 @@ async function openResults(seedStr: string): Promise<void> {
 
       const title = document.createElement("div");
       title.className = "cellTitle";
-      title.textContent = `Cell ${r + 1},${c + 1}`;
+      const rowLabel = rowRules[r]?.label ?? `Row ${r + 1}`;
+      const colLabel = colRules[c]?.label ?? `Col ${c + 1}`;
+      title.textContent = `${rowLabel} ∩ ${colLabel}`;
+
       cell.appendChild(title);
 
       const cellTotal = Number(totalsByCell[k] ?? 0);
