@@ -496,7 +496,7 @@ async function pickCard(card: Card): Promise<void> {
     tick();
 
     mistakes++;
-    requestAnimationFrame(() => shakeCellRedRC(r, c, 3000)); // 3s piros shake
+    requestAnimationFrame(() => shakeCellRedRC(r, c, 950)); // 3s piros shake
     return;
 
   }
@@ -705,7 +705,7 @@ async function openResults(seedStr: string): Promise<void> {
       title.className = "cellTitle";
       const rowLabel = rowRules[r]?.label ?? `Row ${r + 1}`;
       const colLabel = colRules[c]?.label ?? `Col ${c + 1}`;
-      title.textContent = `${rowLabel} ∩ ${colLabel}`;
+      title.textContent = `${rowLabel} + ${colLabel}`;
 
       cell.appendChild(title);
 
