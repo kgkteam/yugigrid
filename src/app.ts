@@ -472,7 +472,7 @@ async function pickCard(card: Card): Promise<void> {
     // ürüljön mindkettő, és a cél legyen piros
   if (prev && (prev.r !== r || prev.c !== c) && targetHadCard) {
     // ✅ ne töröljük a régit, ne nullázzuk a %-ot
-    wrong[r][c] = true;
+    wrong[r][c] = false;
 
     closePicker();
     renderBoard(currentSeedStr);
@@ -486,7 +486,7 @@ async function pickCard(card: Card): Promise<void> {
 
 
     // ✅ minden más rossz próbálkozás
-    wrong[r][c] = true;
+    wrong[r][c] = false;
 
     // ⚠️ NE nullázd a %-ot hibánál!
     // cellPickPct[r][c] = null;
