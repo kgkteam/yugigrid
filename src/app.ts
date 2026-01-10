@@ -470,37 +470,35 @@ async function pickCard(card: Card): Promise<void> {
   if (!ok) {
     // ✅ ha egy másik cellából akarsz átírni egy FOGLALT cellába:
     // ürüljön mindkettő, és a cél legyen piros
-    if (prev && (prev.r !== r || prev.c !== c) && targetHadCard) {
-      // forrás ürítés
-      grid[prev.r][prev.c] = null;
-      wrong[prev.r][prev.c] = false;
-      cellPickPct[prev.r][prev.c] = null;
-
-      // cél ürítés + piros
-      grid[r][c] = null;
-      wrong[r][c] = true;
-      cellPickPct[r][c] = null;
-
-      closePicker();
-      renderBoard(currentSeedStr);
-      tick();
-
-      mistakes++;
-      requestAnimationFrame(() => shakeCell(r, c));
-      return;
-    }
-
-    // ✅ minden más rossz próbálkozás
+  if (prev && (prev.r !== r || prev.c !== c) && targetHadCard) {
+    // ✅ ne töröljük a régit, ne nullázzuk a %-ot
     wrong[r][c] = true;
-    cellPickPct[r][c] = null;
 
     closePicker();
     renderBoard(currentSeedStr);
     tick();
 
     mistakes++;
-    requestAnimationFrame(() => shakeCell(r, c));
+    requestAnimationFrame(() => shakeCellRedRC(r, c, 3000));
     return;
+  }
+
+
+
+    // ✅ minden más rossz próbálkozás
+    wrong[r][c] = true;
+
+    // ⚠️ NE nullázd a %-ot hibánál!
+    // cellPickPct[r][c] = null;
+
+    closePicker();
+    renderBoard(currentSeedStr);
+    tick();
+
+    mistakes++;
+    requestAnimationFrame(() => shakeCellRedRC(r, c, 3000)); // 3s piros shake
+    return;
+
   }
 
   // ✅ OK eset: mehet az átrakás
@@ -528,6 +526,35 @@ async function pickCard(card: Card): Promise<void> {
     })
     .catch(() => {});
 }
+
+/* === Cell shake helper === */
+
+const shakeTimers = new Map<string, number>();
+
+function shakeCellRedRC(r: number, c: number, ms = 3000) {
+  const b = $("board");
+  if (!b) return;
+
+  const key = `${r},${c}`;
+  const cell = b.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`) as HTMLElement | null;
+  if (!cell) return;
+
+  const prev = shakeTimers.get(key);
+  if (prev) window.clearTimeout(prev);
+
+  cell.classList.remove("cellShake");
+  void cell.offsetWidth;
+  cell.classList.add("cellShake");
+
+  const t = window.setTimeout(() => {
+    cell.classList.remove("cellShake");
+    shakeTimers.delete(key);
+  }, ms);
+
+  shakeTimers.set(key, t);
+}
+
+
 
 /* =========================
    COMMUNITY PICKS (GLOBAL via Netlify Blobs)
@@ -1042,6 +1069,8 @@ function bindButtons(): void {
     };
   }
 }
+
+
 
 /* =========================
    DEBUG ONLY
